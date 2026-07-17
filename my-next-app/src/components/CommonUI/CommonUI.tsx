@@ -461,21 +461,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
       <div className={`p-4 flex-1 overflow-y-auto scrollbar-thin ${collapsed ? 'space-y-4' : 'space-y-3'}`}>
         {navSections.map((section) => {
           const isOpen = expandedSections[section.title] ?? false;
+          const isSectionDisabled = section.title === 'User Management' || section.title === 'System';
+
           return (
-            <div key={section.title} className="flex flex-col">
+            <div 
+              key={section.title} 
+              className={`flex flex-col ${isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}`}
+            >
               {!collapsed ? (
                 // Section Title (Collapsible Header)
                 <button
-                  onClick={() => toggleSection(section.title)}
-                  className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white hover:text-[#963F29] hover:bg-white/5 transition-all select-none group mb-1"
+                  disabled={isSectionDisabled}
+                  onClick={() => !isSectionDisabled && toggleSection(section.title)}
+                  className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white ${
+                    isSectionDisabled 
+                      ? 'cursor-not-allowed text-slate-400' 
+                      : 'hover:text-[#963F29] hover:bg-white/5'
+                  } transition-all select-none group mb-1`}
                 >
                   <span className="text-xs uppercase tracking-wider font-bold font-sans">
                     {section.title}
                   </span>
-                  {isOpen ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
+                  {!isSectionDisabled && (
+                    isOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
+                    )
                   )}
                 </button>
               ) : (
@@ -484,7 +496,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
               )}
 
               {/* Items List (only show if open or if collapsed) */}
-              {(isOpen || collapsed) && (
+              {(isOpen || collapsed) && !isSectionDisabled && (
                 <div className={`space-y-1 transition-all duration-150 ${!collapsed ? 'pl-3 border-l border-slate-700/30 ml-2.5 mt-1.5 mb-2' : ''}`}>
                   {section.items.map((item) => {
                     const Icon = item.icon;
