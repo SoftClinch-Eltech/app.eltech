@@ -64,7 +64,7 @@ import { SAPMappingPanel } from './components/SAPMappingPanel/SAPMappingPanel';
 
 export default function App() {
   // Session Authentication state
-  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers[0]); // Auto-login first user (Architect) for instant preview!
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Navigation Router state
   const [activeScreen, setActiveScreen] = useState<Screen>('DASHBOARD');
@@ -74,7 +74,7 @@ export default function App() {
 
   // Wireframe / SAP Blueprint Modal toggle
   const [showBlueprint, setShowBlueprint] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Shared users database state for SU01 User Master dynamic updates
   const [usersList, setUsersList] = useState<User[]>(initialUsers);
