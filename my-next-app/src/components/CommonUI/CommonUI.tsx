@@ -22,7 +22,8 @@ import {
   Settings2,
   LayoutGrid,
   ShieldCheck,
-  Archive
+  Archive,
+  Menu
 } from 'lucide-react';
 
 // ============================================================================
@@ -110,6 +111,7 @@ interface AppHeaderProps {
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
   onShowHelp: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -117,7 +119,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   activeScreen,
   onNavigate,
   onLogout,
-  onShowHelp
+  onShowHelp,
+  onToggleSidebar
 }) => {
   const [timeStr, setTimeStr] = useState<string>('2026-07-15 03:51:54 UTC');
 
@@ -134,6 +137,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <header className="bg-[#273B5E] text-white border-b border-slate-700/80 select-none shadow-sm h-14 sticky top-0 z-30 flex items-center justify-between px-4">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-3">
+        {currentUser && onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="lg:hidden p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition-colors shrink-0"
+            title="Toggle Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <div
           onClick={() => currentUser && onNavigate('DASHBOARD')}
           className="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
@@ -410,119 +422,139 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
   };
 
   return (
-    <aside className={`border-r border-slate-700/60 bg-[#273B5E] text-slate-200 h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] sticky top-[3.5rem] flex flex-col transition-all ${collapsed ? 'w-20' : 'w-72'}`}>
-      <div className={`px-4 py-4 border-b border-slate-700/60 shrink-0 ${collapsed ? 'text-center' : ''}`}>
-        <div className={`flex ${collapsed ? 'flex-col items-center gap-3' : 'items-center gap-3'}`}>
-          <div
-            onClick={() => onNavigate('DASHBOARD')}
-            className="cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
-          >
-            {/* White/Navy SC Logo Box */}
-            <div className="w-12 h-12 rounded-3xl bg-white text-[#273B5E] flex items-center justify-center font-sans font-black text-sm tracking-wider shadow-sm select-none shrink-0">
-              SC
+    <>
+      {/* Mobile Sidebar backdrop */}
+      {!collapsed && (
+        <div
+          className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-35 transition-opacity"
+          onClick={onToggle}
+        />
+      )}
+      <aside className={`border-r border-slate-700/60 bg-[#273B5E] text-slate-200 lg:h-[calc(100vh-3.5rem)] lg:max-h-[calc(100vh-3.5rem)] lg:sticky lg:top-[3.5rem] flex flex-col transition-all duration-300 ease-in-out z-40
+        fixed inset-y-0 left-0 h-screen max-h-screen lg:translate-x-0
+        ${collapsed ? '-translate-x-full lg:w-20' : 'translate-x-0 lg:w-72 w-72'}
+      `}>
+        <div className={`px-4 py-4 border-b border-slate-700/60 shrink-0 ${collapsed ? 'text-center' : ''}`}>
+          <div className={`flex ${collapsed ? 'flex-col items-center gap-3' : 'items-center gap-3'}`}>
+            <div
+              onClick={() => {
+                onNavigate('DASHBOARD');
+                if (window.innerWidth < 1024) onToggle();
+              }}
+              className="cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+            >
+              {/* White/Navy SC Logo Box */}
+              <div className="w-12 h-12 rounded-3xl bg-white text-[#273B5E] flex items-center justify-center font-sans font-black text-sm tracking-wider shadow-sm select-none shrink-0">
+                SC
+              </div>
             </div>
+
+            {!collapsed && (
+              <div
+                onClick={() => {
+                  onNavigate('DASHBOARD');
+                  if (window.innerWidth < 1024) onToggle();
+                }}
+                className="text-left flex-1 min-w-0 cursor-pointer"
+              >
+                <span className="block text-[10px] uppercase tracking-[0.2em] text-[#8A9BB4] font-black leading-none mb-1 font-sans">
+                  SOFTCLINCH
+                </span>
+                <span className="block text-[15px] font-extrabold text-white font-sans leading-tight">
+                  Consult Services
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={onToggle}
+              className="rounded-full bg-slate-800/80 hover:bg-slate-700 p-2 text-slate-300 transition-colors w-8 h-8 flex items-center justify-center shrink-0 ml-auto"
+              title={collapsed ? 'Open sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4 text-slate-300" /> : <ChevronLeft className="w-4 h-4 text-slate-300" />}
+            </button>
           </div>
 
           {!collapsed && (
-            <div
-              onClick={() => onNavigate('DASHBOARD')}
-              className="text-left flex-1 min-w-0 cursor-pointer"
-            >
-              <span className="block text-[10px] uppercase tracking-[0.2em] text-[#8A9BB4] font-black leading-none mb-1 font-sans">
-                SOFTCLINCH
-              </span>
-              <span className="block text-[15px] font-extrabold text-white font-sans leading-tight">
-                Consult Services
-              </span>
+            <div className="mt-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 text-[10px] select-none text-left">
+              <p className="text-[#8A9BB4] uppercase tracking-[0.18em] font-extrabold font-sans">
+                ACTIVE CLIENT
+              </p>
+              <p className="mt-1 font-mono text-white font-bold text-[11px]">
+                {currentUser ? currentUser.username : 'CLNT 800'}
+              </p>
             </div>
           )}
-
-          <button
-            onClick={onToggle}
-            className="rounded-full bg-slate-800/80 hover:bg-slate-700 p-2 text-slate-300 transition-colors w-8 h-8 flex items-center justify-center shrink-0 ml-auto"
-            title={collapsed ? 'Open sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4 text-slate-300" /> : <ChevronLeft className="w-4 h-4 text-slate-300" />}
-          </button>
         </div>
 
-        {!collapsed && (
-          <div className="mt-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 text-[10px] select-none text-left">
-            <p className="text-[#8A9BB4] uppercase tracking-[0.18em] font-extrabold font-sans">
-              ACTIVE CLIENT
-            </p>
-            <p className="mt-1 font-mono text-white font-bold text-[11px]">
-              {currentUser ? currentUser.username : 'CLNT 800'}
-            </p>
-          </div>
-        )}
-      </div>
+        <div className={`p-4 flex-1 overflow-y-auto scrollbar-thin ${collapsed ? 'space-y-4' : 'space-y-3'}`}>
+          {navSections.map((section) => {
+            const isOpen = expandedSections[section.title] ?? false;
+            const isSectionDisabled = section.title === 'User Management' || section.title === 'System';
 
-      <div className={`p-4 flex-1 overflow-y-auto scrollbar-thin ${collapsed ? 'space-y-4' : 'space-y-3'}`}>
-        {navSections.map((section) => {
-          const isOpen = expandedSections[section.title] ?? false;
-          const isSectionDisabled = section.title === 'User Management' || section.title === 'System';
+            return (
+              <div
+                key={section.title}
+                className={`flex flex-col ${isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}`}
+              >
+                {!collapsed ? (
+                  // Section Title (Collapsible Header)
+                  <button
+                    disabled={isSectionDisabled}
+                    onClick={() => !isSectionDisabled && toggleSection(section.title)}
+                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white ${
+                      isSectionDisabled
+                        ? 'cursor-not-allowed text-slate-400'
+                        : 'hover:text-[#963F29] hover:bg-white/5'
+                    } transition-all select-none group mb-1`}
+                  >
+                    <span className="text-xs uppercase tracking-wider font-bold font-sans">
+                      {section.title}
+                    </span>
+                    {!isSectionDisabled && (
+                      isOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
+                      )
+                    )}
+                  </button>
+                ) : (
+                  // Separator for collapsed state
+                  <div className="border-b border-slate-700/40 my-2 shrink-0" />
+                )}
 
-          return (
-            <div 
-              key={section.title} 
-              className={`flex flex-col ${isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}`}
-            >
-              {!collapsed ? (
-                // Section Title (Collapsible Header)
-                <button
-                  disabled={isSectionDisabled}
-                  onClick={() => !isSectionDisabled && toggleSection(section.title)}
-                  className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white ${
-                    isSectionDisabled 
-                      ? 'cursor-not-allowed text-slate-400' 
-                      : 'hover:text-[#963F29] hover:bg-white/5'
-                  } transition-all select-none group mb-1`}
-                >
-                  <span className="text-xs uppercase tracking-wider font-bold font-sans">
-                    {section.title}
-                  </span>
-                  {!isSectionDisabled && (
-                    isOpen ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#963F29] transition-transform" />
-                    )
-                  )}
-                </button>
-              ) : (
-                // Separator for collapsed state
-                <div className="border-b border-slate-700/40 my-2 shrink-0" />
-              )}
-
-              {/* Items List (only show if open or if collapsed) */}
-              {(isOpen || collapsed) && !isSectionDisabled && (
-                <div className={`space-y-1 transition-all duration-150 ${!collapsed ? 'pl-3 border-l border-slate-700/30 ml-2.5 mt-1.5 mb-2' : ''}`}>
-                  {section.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.screen || null);
-                    return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => {
-                          if (item.disabled) return;
-                          if (item.screen) onNavigate(item.screen);
-                        }}
-                        className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-xs transition-all duration-150 ${item.disabled ? 'cursor-not-allowed opacity-40 blur-[1px]' : 'hover:bg-white/10 hover:translate-x-1 hover:text-white'} ${active ? 'bg-[#963F29] text-white shadow-lg shadow-[#963F29]/20' : 'text-slate-300'}`}
-                        title={item.disabled ? 'Coming soon in future release' : item.label}
-                      >
-                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
-                        {!collapsed && <span className="font-medium truncate">{item.label}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {/* Items List (only show if open or if collapsed) */}
+                {(isOpen || collapsed) && !isSectionDisabled && (
+                  <div className={`space-y-1 transition-all duration-150 ${!collapsed ? 'pl-3 border-l border-slate-700/30 ml-2.5 mt-1.5 mb-2' : ''}`}>
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.screen || null);
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => {
+                            if (item.disabled) return;
+                            if (item.screen) {
+                              onNavigate(item.screen);
+                              if (window.innerWidth < 1024) onToggle(); // Auto close on mobile
+                            }
+                          }}
+                          className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-xs transition-all duration-150 ${item.disabled ? 'cursor-not-allowed opacity-40 blur-[1px]' : 'hover:bg-white/10 hover:translate-x-1 hover:text-white'} ${active ? 'bg-[#963F29] text-white shadow-lg shadow-[#963F29]/20' : 'text-slate-300'}`}
+                          title={item.disabled ? 'Coming soon in future release' : item.label}
+                        >
+                          <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                          {!collapsed && <span className="font-medium truncate">{item.label}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
       <div className="px-4 py-5 border-t border-slate-700/60 shrink-0">
         <div className={`flex items-center gap-3 text-[11px] font-sans text-slate-400 ${collapsed ? 'flex-col items-center' : ''}`}>
@@ -542,6 +574,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

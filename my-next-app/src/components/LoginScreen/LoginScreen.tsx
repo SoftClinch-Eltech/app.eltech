@@ -10,49 +10,92 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('••••••••');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username) {
-      setError('Please select or input a valid SAP Username');
+      setError('Please select or input a valid  Username');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password.');
       return;
     }
 
-    const matchedUser = initialUsers.find(
-      (u) => u.username.toLowerCase() === username.trim().toLowerCase()
-    );
+    setLoading(true);
+    setError('');
 
-    if (matchedUser) {
-      if (matchedUser.status === 'Locked') {
-        setError('This SAP user account is locked. Contact your Basis Team.');
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.detail || 'Invalid username or password.');
+        setLoading(false);
         return;
       }
-      onLoginSuccess(matchedUser);
-    } else {
-      // Allow general entry if they type a custom one
-      const fallbackUser: User = {
-        id: 'USR999',
-        username: username,
-        fullName: username.charAt(0).toUpperCase() + username.slice(1) + ' (Custom User)',
-        email: `${username}@softclinch.com`,
-        role: 'Accountant',
-        department: 'General Ledger Team',
-        permissions: {
-          fb03: true,
-          vf03: true,
-          fbl3n: true,
-          fbl5n: true,
-          fbl1n: true,
-          userMaster: false,
-          settings: false,
-        },
-        status: 'Active',
-        lastLogin: 'Just now',
-      };
-      onLoginSuccess(fallbackUser);
+
+      const data = await response.json();
+      
+      // Store token in localStorage
+      if (data.token) {
+        localStorage.setItem('sap_token', data.token);
+        localStorage.setItem('sap_username', data.username);
+      }
+
+      // Check if user exists in initialUsers
+      const matchedUser = initialUsers.find(
+        (u) => u.username.toLowerCase() === data.username.toLowerCase()
+      );
+
+      if (matchedUser) {
+        if (matchedUser.status === 'Locked') {
+          setError('This SAP user account is locked. Contact your Basis Team.');
+          setLoading(false);
+          return;
+        }
+        onLoginSuccess(matchedUser);
+      } else {
+        // Fallback user if not found in initialUsers but authenticated successfully on backend
+        const fallbackUser: User = {
+          id: 'USR999',
+          username: data.username,
+          fullName: data.username.charAt(0).toUpperCase() + data.username.slice(1) + ' (Custom User)',
+          email: `${data.username}@softclinch.com`,
+          role: 'Accountant',
+          department: 'General Ledger Team',
+          permissions: {
+            fb03: true,
+            vf03: true,
+            fbl3n: true,
+            fbl5n: true,
+            fbl1n: true,
+            userMaster: false,
+            settings: false,
+          },
+          status: 'Active',
+          lastLogin: 'Just now',
+        };
+        onLoginSuccess(fallbackUser);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to connect to the backend server. Please verify the Django API is running.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,9 +173,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <button
             id="btn-login-submit"
             type="submit"
-            className="w-full bg-[#273B5E] hover:bg-[#3d5680] text-white p-2.5 rounded-lg font-sans font-semibold text-xs tracking-wide transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+            disabled={loading}
+            className="w-full bg-[#273B5E] hover:bg-[#3d5680] text-white p-2.5 rounded-lg font-sans font-semibold text-xs tracking-wide transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>LOG IN</span>
+            {loading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>LOGGING IN...</span>
+              </>
+            ) : (
+              <span>LOG IN</span>
+            )}
           </button>
         </form>
 

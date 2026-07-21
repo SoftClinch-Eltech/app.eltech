@@ -79,6 +79,48 @@ export default function App() {
   // Shared users database state for SU01 User Master dynamic updates
   const [usersList, setUsersList] = useState<User[]>(initialUsers);
 
+  // Load session from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('sap_token');
+    const savedUsername = localStorage.getItem('sap_username');
+    if (savedToken && savedUsername) {
+      const matchedUser = usersList.find(
+        (u) => u.username.toLowerCase() === savedUsername.toLowerCase()
+      );
+      if (matchedUser) {
+        setCurrentUser(matchedUser);
+      } else {
+        const fallbackUser: User = {
+          id: 'USR999',
+          username: savedUsername,
+          fullName: savedUsername.charAt(0).toUpperCase() + savedUsername.slice(1) + ' (Custom User)',
+          email: `${savedUsername}@softclinch.com`,
+          role: 'Accountant',
+          department: 'General Ledger Team',
+          permissions: {
+            fb03: true,
+            vf03: true,
+            fbl3n: true,
+            fbl5n: true,
+            fbl1n: true,
+            userMaster: false,
+            settings: false,
+          },
+          status: 'Active',
+          lastLogin: 'Just now',
+        };
+        setCurrentUser(fallbackUser);
+      }
+    }
+  }, [usersList]);
+
+  // Collapse sidebar by default on mobile/tablet screens
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarCollapsed(true);
+    }
+  }, []);
+
   // Helper to trigger system toast notices
   const triggerToast = (message: string, type: Toast['type'] = 'success') => {
     setToast({ message, type });
@@ -92,9 +134,9 @@ export default function App() {
       if (basePath) {
         path = path.slice(basePath.length);
       }
-      
+
       const targetScreen = SLUG_TO_SCREEN[path] || (currentUser ? 'DASHBOARD' : 'LOGIN');
-      
+
       if (!currentUser && targetScreen !== 'LOGIN') {
         setActiveScreen('LOGIN');
         window.history.replaceState(null, '', `${basePath}/login`);
@@ -122,6 +164,8 @@ export default function App() {
     if (currentUser) {
       triggerToast(`User ${currentUser.username} logged out from client gateway.`);
     }
+    localStorage.removeItem('sap_token');
+    localStorage.removeItem('sap_username');
     setCurrentUser(null);
     setActiveScreen('LOGIN');
 
@@ -180,6 +224,7 @@ export default function App() {
               onNavigate={handleNavigate}
               onLogout={handleLogout}
               onShowHelp={() => setShowBlueprint(true)}
+              onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
             />
             <Breadcrumbs activeScreen={activeScreen} onNavigate={handleNavigate} />
           </>
@@ -205,70 +250,70 @@ export default function App() {
               <LoginScreen onLoginSuccess={handleLogin} />
             ) : (
               <>
-              {/* Dashboard view */}
-              {activeScreen === 'DASHBOARD' && (
-                <DashboardScreen currentUser={currentUser} onNavigate={handleNavigate} />
-              )}
+                {/* Dashboard view */}
+                {activeScreen === 'DASHBOARD' && (
+                  <DashboardScreen currentUser={currentUser} onNavigate={handleNavigate} />
+                )}
 
-              {/* Module 1: Financial Statements */}
-              {(activeScreen.startsWith('FIN_STATEMENTS_') ||
-                activeScreen.includes('TRIAL_BALANCE') ||
-                activeScreen.includes('BALANCE_DISP') ||
-                activeScreen.includes('PROFIT_LOSS') ||
-                activeScreen.includes('BALANCE_SHEET')) && (
-                <FinancialStatementsModule
-                  activeScreen={activeScreen}
-                  onNavigate={handleNavigate}
-                  triggerToast={triggerToast}
-                />
-              )}
+                {/* Module 1: Financial Statements */}
+                {(activeScreen.startsWith('FIN_STATEMENTS_') ||
+                  activeScreen.includes('TRIAL_BALANCE') ||
+                  activeScreen.includes('BALANCE_DISP') ||
+                  activeScreen.includes('PROFIT_LOSS') ||
+                  activeScreen.includes('BALANCE_SHEET')) && (
+                    <FinancialStatementsModule
+                      activeScreen={activeScreen}
+                      onNavigate={handleNavigate}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {/* Module 2: Ledger Reporting */}
-              {(activeScreen.startsWith('LEDGER_REP_') ||
-                activeScreen.includes('GL_LEDGER_') ||
-                activeScreen.includes('CUSTOMER_LEDGER_') ||
-                activeScreen.includes('VENDOR_LEDGER_') ||
-                activeScreen.includes('STOCK_')) && (
-                <LedgerReportingModule
-                  activeScreen={activeScreen}
-                  onNavigate={handleNavigate}
-                  triggerToast={triggerToast}
-                />
-              )}
+                {/* Module 2: Ledger Reporting */}
+                {(activeScreen.startsWith('LEDGER_REP_') ||
+                  activeScreen.includes('GL_LEDGER_') ||
+                  activeScreen.includes('CUSTOMER_LEDGER_') ||
+                  activeScreen.includes('VENDOR_LEDGER_') ||
+                  activeScreen.includes('STOCK_')) && (
+                    <LedgerReportingModule
+                      activeScreen={activeScreen}
+                      onNavigate={handleNavigate}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {/* Module 3: Document Display */}
-              {(activeScreen.startsWith('DOC_DISPLAY_') ||
-                activeScreen.includes('FIN_DOC_') ||
-                activeScreen.includes('INVOICE_') ||
-                activeScreen.includes('PO_')) && (
-                <DocumentDisplayModule
-                  activeScreen={activeScreen}
-                  onNavigate={handleNavigate}
-                  triggerToast={triggerToast}
-                />
-              )}
+                {/* Module 3: Document Display */}
+                {(activeScreen.startsWith('DOC_DISPLAY_') ||
+                  activeScreen.includes('FIN_DOC_') ||
+                  activeScreen.includes('INVOICE_') ||
+                  activeScreen.includes('PO_')) && (
+                    <DocumentDisplayModule
+                      activeScreen={activeScreen}
+                      onNavigate={handleNavigate}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {/* Module 4: User Master (SU01) */}
-              {(activeScreen.startsWith('USER_MASTER_') || activeScreen === 'USER_DETAILS') && (
-                <UserMasterModule
-                  activeScreen={activeScreen}
-                  onNavigate={handleNavigate}
-                  triggerToast={triggerToast}
-                  users={usersList}
-                  onUpdateUsers={setUsersList}
-                />
-              )}
+                {/* Module 4: User Master (SU01) */}
+                {(activeScreen.startsWith('USER_MASTER_') || activeScreen === 'USER_DETAILS') && (
+                  <UserMasterModule
+                    activeScreen={activeScreen}
+                    onNavigate={handleNavigate}
+                    triggerToast={triggerToast}
+                    users={usersList}
+                    onUpdateUsers={setUsersList}
+                  />
+                )}
 
-              {/* Module 5: Settings (SPRO) */}
-              {(activeScreen.startsWith('SETTINGS_')) && (
-                <SettingsModule
-                  activeScreen={activeScreen}
-                  onNavigate={handleNavigate}
-                  triggerToast={triggerToast}
-                />
-              )}
-            </>
-          )}
+                {/* Module 5: Settings (SPRO) */}
+                {(activeScreen.startsWith('SETTINGS_')) && (
+                  <SettingsModule
+                    activeScreen={activeScreen}
+                    onNavigate={handleNavigate}
+                    triggerToast={triggerToast}
+                  />
+                )}
+              </>
+            )}
           </div>
         </main>
       </div>

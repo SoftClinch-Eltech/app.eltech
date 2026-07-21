@@ -128,7 +128,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
       (h) =>
         h.BELNR === docNumber.trim() &&
         h.BUKRS === companyCode.trim() &&
-        h.GJAHR === fiscalYear.trim()
+        (!fiscalYear.trim() || h.GJAHR === fiscalYear.trim())
     );
   }, [docNumber, companyCode, fiscalYear]);
 
@@ -293,22 +293,17 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs font-sans">
-              {/* Field 1: Billing Document */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Billing Document</label>
-                <input
-                  id="fb03-sel-billing"
-                  type="text"
-                  placeholder="e.g. 1800091001"
-                  value={billingDocNumber}
-                  onChange={(e) => setBillingDocNumber(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2.5 text-xs font-mono"
-                />
-              </div>
+              {formError && (
+                <div className="p-3 bg-rose-50 text-[#963F29] border border-rose-200 rounded text-xs leading-relaxed font-sans font-semibold">
+                  ⚠️ {formError}
+                </div>
+              )}
 
-              {/* Field 2: Document Number */}
+              {/* Field 1: Document Number */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Number</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Document Number <span className="text-[#963F29] font-black">*</span>
+                </label>
                 <input
                   id="fb03-sel-num"
                   type="text"
@@ -322,43 +317,40 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 />
               </div>
 
-              {/* Fields 3 & 4: Company Code + Fiscal Year */}
+              {/* Fields 2 & 3: Company Code + Fiscal Year */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Company Code</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Company Code <span className="text-[#963F29] font-black">*</span>
+                  </label>
                   <input
                     id="fb03-sel-company"
                     type="text"
                     placeholder="e.g. 1900"
                     value={companyCode}
-                    onChange={(e) => setCompanyCode(e.target.value)}
+                    onChange={(e) => {
+                      setCompanyCode(e.target.value);
+                      setFormError('');
+                    }}
                     className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-bold"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fiscal Year</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Fiscal Year <span className="text-slate-400 font-medium">(Optional)</span>
+                  </label>
                   <input
                     id="fb03-sel-year"
                     type="text"
                     placeholder="e.g. 2026"
                     value={fiscalYear}
-                    onChange={(e) => setFiscalYear(e.target.value)}
+                    onChange={(e) => {
+                      setFiscalYear(e.target.value);
+                      setFormError('');
+                    }}
                     className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
                   />
                 </div>
-              </div>
-
-              {/* Field 5: Reference */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Reference</label>
-                <input
-                  id="fb03-sel-ref"
-                  type="text"
-                  placeholder="e.g. PO-2026-001"
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2.5 text-xs font-mono"
-                />
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-4 gap-3">
@@ -376,7 +368,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                       setBillingDocNumber('');
                       setDocNumber('');
                       setCompanyCode('1900');
-                      setFiscalYear('2026');
+                      setFiscalYear('');
                       setReference('');
                       setFormError('');
                     }}
@@ -387,6 +379,15 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   <button
                     id="btn-fb03-display"
                     onClick={() => {
+                      if (!docNumber.trim()) {
+                        setFormError('Document Number is required.');
+                        return;
+                      }
+                      if (!companyCode.trim()) {
+                        setFormError('Company Code is required.');
+                        return;
+                      }
+
                       if (isIndianDb) {
                         const matchedIn = indianInvoices.find((i) => i.docNo === docNumber.trim());
                         if (!matchedIn) {
@@ -400,10 +401,14 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                         (h) =>
                           h.BELNR === docNumber.trim() &&
                           h.BUKRS === companyCode.trim() &&
-                          h.GJAHR === fiscalYear.trim()
+                          (!fiscalYear.trim() || h.GJAHR === fiscalYear.trim())
                       );
                       if (!matched) {
-                        setFormError(`Accounting Document ${docNumber} not found in SAP BKPF table for BUKRS ${companyCode} / Year ${fiscalYear}.`);
+                        setFormError(
+                          fiscalYear.trim()
+                            ? `Accounting Document ${docNumber} not found in SAP BKPF table for BUKRS ${companyCode} / Year ${fiscalYear}.`
+                            : `Accounting Document ${docNumber} not found in SAP BKPF table for BUKRS ${companyCode}.`
+                        );
                         return;
                       }
                       onNavigate('FIN_DOC_REP');

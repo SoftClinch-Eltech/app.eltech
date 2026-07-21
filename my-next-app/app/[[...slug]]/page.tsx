@@ -1,5 +1,7 @@
 import App from "@/src/App";
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return [
     { slug: [] },
