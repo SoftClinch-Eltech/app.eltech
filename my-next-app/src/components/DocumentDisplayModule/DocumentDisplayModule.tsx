@@ -196,6 +196,526 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
   }, []);
 
   // Export actions
+  const renderFinancialReport = () => {
+    if (isIndianDb) {
+      const selectedIndianInvoice = indianInvoices.find((i) => i.docNo === docNumber.trim()) || indianInvoices[0];
+      if (!selectedIndianInvoice) {
+        return (
+          <div className="p-6 text-center select-none font-sans">
+            <p className="text-slate-500 text-xs">Error loading Indian localized financial document.</p>
+            <button onClick={() => onNavigate('FIN_DOC_SEL')} className="bg-slate-800 text-white px-4 py-2 text-xs rounded mt-3">Back</button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-6 space-y-6 select-none animate-fade-in">
+          {/* Header navigation bar */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-[#963F29]/30 pb-4 pr-10 sm:pr-12">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#273B5E]" />
+                <h2 className="text-lg font-sans font-black text-[#273B5E]">Financial Document Details</h2>
+              </div>
+    
+            </div>
+            <button onClick={() => onNavigate('FIN_DOC_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#963F29]/30 rounded-lg text-xs text-[#963F29] hover:bg-[#963F29]/5 font-black transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /><span>Document Selection</span>
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                Financial Document Transaction Context
+              </h3>
+            </div>
+            {(() => {
+              const fbFields: ButtonBoxField[] = [
+                { label: 'Document Number', value: selectedIndianInvoice.docNo, valueClass: 'text-[#963F29] font-black' },
+                { label: 'Company Code', value: '1900 (IN)' },
+                { label: 'Customer ID', value: 'CUST-IN-401', valueClass: 'text-amber-700 font-bold' },
+              ];
+              return (
+                <OutputHeaderButtonBoxes
+                  fields={fbFields}
+                  className="border-2 border-[#963F29]"
+                />
+              );
+            })()}
+          </div>
+
+          {/* Table section */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                Financial Document Display Table
+              </h3>
+            </div>
+            <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
+              {/* Right side toolbar placeholder */}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                  <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
+                    <tr>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Doc No (BELNR)</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Company Code</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Customer ID</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Doc Date</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Posting Date</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Fiscal Year</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Reference</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">Currency</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Amount</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">Material</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">Quantity</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[70px]">Period</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">Customer Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
+                    {filteredIndianInvoices.map((item, idx) => (
+                      <tr key={idx} className={`hover:bg-[#963F29]/5 transition-all ${item.docNo === selectedIndianInvoice.docNo ? 'bg-[#963F29]/10' : ''}`}>
+                        <td className="p-3 font-mono font-bold text-[#963F29]">{item.docNo}</td>
+                        <td className="p-3 font-mono text-slate-600">1900</td>
+                        <td className="p-3 font-mono font-bold text-amber-700">CUST-IN-401</td>
+                        <td className="p-3 font-mono text-slate-600">2026-07-10</td>
+                        <td className="p-3 font-mono text-slate-600">2026-07-12</td>
+                        <td className="p-3 font-mono text-slate-600">2026</td>
+                        <td className="p-3 font-mono text-slate-600">{billingReference || `REF-IN-9100${idx + 1}`}</td>
+                        <td className="p-3 font-mono text-slate-500">INR</td>
+                        <td className="p-3 font-mono font-bold text-emerald-750 text-right">{(item.netValue + item.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 font-bold text-slate-850">
+                          <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
+                          {item.material}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-500">07</td>
+                        <td className="p-3">
+                          <div className="space-y-1 font-sans text-xs">
+                            <p className="font-bold text-[#273B5E]">{item.customerName}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">GSTIN: <span className="font-bold">{item.customerGstin}</span></p>
+                            <p className="text-[10px] text-slate-400">State: <span className="font-bold">{item.customerState}</span></p>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      if (!activeBKPF) {
+        return (
+          <div className="p-6 text-center select-none font-sans">
+            <p className="text-slate-500 text-xs">Error loading document. Returning...</p>
+            <button onClick={() => onNavigate('FIN_DOC_SEL')} className="bg-slate-800 text-white px-4 py-2 text-xs rounded mt-3">Back</button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-6 space-y-6 select-none">
+          {/* Header toolbar */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4 pr-10 sm:pr-12">
+            <div>
+              <h2 className="text-lg font-sans font-bold text-[#273B5E]">Financial Document Details (FB03)</h2>
+            </div>
+            <button
+              onClick={() => onNavigate('FIN_DOC_SEL')}
+              className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Document Selection</span>
+            </button>
+          </div>
+
+          {/* BKPF Header Details metadata */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#273B5E] rounded-full" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Header Information (SAP Table BKPF)
+              </h3>
+            </div>
+            {(() => {
+              const fbFields: ButtonBoxField[] = [
+                { label: 'Doc Number', value: activeBKPF.BELNR, highlight: true, valueClass: 'text-rose-600' },
+                { label: 'Net Value', value: `$${bkpfSums.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, valueClass: 'text-emerald-600' },
+                { label: 'Billing Date', value: activeBKPF.BLDAT },
+                { label: 'Doc Type (BLART)', value: activeBKPF.BLART, badge: 'HEADER TYPE' },
+                { label: 'Currency', value: activeBKPF.WAERS, valueClass: 'text-amber-600' },
+                { label: 'Company Code', value: activeBKPF.BUKRS },
+                { label: 'Fiscal Year', value: activeBKPF.GJAHR },
+                { label: 'Tax Value (Est)', value: `$${(bkpfSums.debit * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}` },
+                { label: 'Reference', value: activeBKPF.XBLNR || 'NONE', valueClass: 'text-[#963F29]' },
+              ];
+              return (
+                <div className="space-y-4">
+                  <OutputHeaderButtonBoxes
+                    fields={fbFields}
+                    tcode="FB03"
+                  />
+                  <div className="bg-slate-50 border border-[#D9DEE6] rounded-lg p-3 text-xs flex gap-1.5">
+                    <span className="text-slate-500 font-bold uppercase font-mono text-[10px]">Header Text (BKTXT):</span>
+                    <span className="text-slate-700 italic font-medium">{activeBKPF.BKTXT || 'No header text assigned'}</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Ledger Segment Summary Cards */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#273B5E] rounded-full" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Document Balance Status Metrics
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white border border-[#D9DEE6] p-4 rounded-lg shadow-sm">
+                <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">Accumulated Debit</span>
+                <span className="text-lg font-mono font-bold text-slate-800 mt-1 block">
+                  ${bkpfSums.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {activeBKPF.WAERS}
+                </span>
+              </div>
+              <div className="bg-white border border-[#D9DEE6] p-4 rounded-lg shadow-sm">
+                <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">Accumulated Credit</span>
+                <span className="text-lg font-mono font-bold text-slate-800 mt-1 block">
+                  ${bkpfSums.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {activeBKPF.WAERS}
+                </span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg shadow-sm">
+                <span className="text-[10px] font-bold text-emerald-700 uppercase font-mono block">Document Balance Status</span>
+                <span className="text-lg font-mono font-bold text-emerald-700 mt-1 block flex items-center gap-1.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Balanced (0.00)</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Line Segment Segment BSEG table */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#273B5E] rounded-full" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Document Line Item Details (BSEG)
+              </h3>
+            </div>
+            <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
+              <TableToolbar
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                totalRecords={activeBSEGItems.length}
+              />
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
+                    <tr>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[150px] align-top">
+                        <div className="text-xs font-black">Doc No (BELNR)</div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[240px] align-top">
+                        <div className="text-xs font-black">Net Value</div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[240px] align-top">
+                        <div className="text-xs font-black">Material</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Commercial description and corporate product identification index)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[160px] align-top">
+                        <div className="text-xs font-black">Quantity</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Physical weight unit in Metric Tons)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-center min-w-[130px] align-top">
+                        <div className="text-xs font-black">Item No</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Line-item position index)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[160px] align-top">
+                        <div className="text-xs font-black">PC/CC</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Assigned profit center or cost center allocation codes)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[180px] align-top">
+                        <div className="text-xs font-black">Tax</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Standard corporate tax distribution amount)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[180px] align-top">
+                        <div className="text-xs font-black">Sales Office</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Registered geographical department handling distribution)
+                        </div>
+                      </th>
+                      <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[220px] align-top">
+                        <div className="text-xs font-black">Customer Details</div>
+                        <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
+                          (Registered entity name and geographic region details)
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-700">
+                    {activeBSEGItems.map((item, idx) => {
+                      let partnerLabel = 'G/L Ledger Split';
+                      if (item.KOART === 'D' && item.KUNNR) {
+                        const c = dbKNA1.find(cu => cu.KUNNR === item.KUNNR);
+                        partnerLabel = c ? c.NAME1 : item.KUNNR;
+                      } else if (item.KOART === 'K' && item.LIFNR) {
+                        const v = dbLFA1.find(ve => ve.LIFNR === item.LIFNR);
+                        partnerLabel = v ? v.NAME1 : item.LIFNR;
+                      }
+
+                      const inrValue = item.WRBTR * 83;
+                      const formattedInrValue = `₹${inrValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                      const formattedInrTax = `₹${(inrValue * 0.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+                      const calculatedQty = `${((item.WRBTR / 100) || 5.5).toFixed(1)} MT`;
+                      const assignedPcCc = item.PRCTR || item.KOSTL || 'PC-MUM-01';
+                      const resolvedMaterial = item.SGTXT || 'Mild Steel Tubes';
+                      const resolvedSalesOffice = idx % 2 === 0 ? 'Mumbai (IN-WEST)' : 'Delhi (IN-NORTH)';
+
+                      return (
+                        <tr key={idx} className="hover:bg-[#963F29]/5 transition-all">
+                          <td className="p-4 font-mono font-black text-[#963F29]">{activeBKPF.BELNR}</td>
+                          <td className="p-4 font-mono font-black text-emerald-750 text-right">
+                            {formattedInrValue}
+                          </td>
+                          <td className="p-4 font-black text-slate-850">
+                            <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
+                            {resolvedMaterial}
+                          </td>
+                          <td className="p-4 text-right font-mono font-black text-slate-900">{calculatedQty}</td>
+                          <td className="p-4 text-center font-mono font-black text-slate-500">{item.BUZEI}</td>
+                          <td className="p-4 font-mono font-black text-slate-600">{assignedPcCc}</td>
+                          <td className="p-4 text-right font-mono font-black text-[#963F29]">
+                            {formattedInrTax}
+                            <span className="block text-[10px] text-slate-400 font-normal font-sans">18% Standard Tax</span>
+                          </td>
+                          <td className="p-4 font-black text-slate-850">{resolvedSalesOffice}</td>
+                          <td className="p-4">
+                            <div className="space-y-1 font-sans text-xs">
+                              <p className="font-black text-[#273B5E]">{partnerLabel}</p>
+                              <p className="text-[10px] text-slate-500 font-mono">Tax Region: <span className="font-bold">Maharashtra</span></p>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const renderInvoiceReport = () => {
+    if (isIndianDb) {
+      const selectedIndianInvoice = activeIndianInvoice || indianInvoices.find(i => i.docNo === billingDocNumber.trim()) || indianInvoices[0];
+      if (!selectedIndianInvoice) return (
+        <div className="p-6 text-center"><p className="text-slate-500 text-xs">Error loading Indian invoice.</p></div>
+      );
+
+      return (
+        <div className="p-6 space-y-6 select-none animate-fade-in">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-[#963F29]/30 pb-4 pr-10 sm:pr-12">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#273B5E]" />
+                <h2 className="text-lg font-sans font-black text-[#273B5E]">Invoice Document Details</h2>
+              </div>
+            </div>
+            <button onClick={() => onNavigate('INVOICE_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#963F29]/30 rounded-lg text-xs text-[#963F29] hover:bg-[#963F29]/5 font-black transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /><span>Invoice Selection</span>
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                Invoice Document Context
+              </h3>
+            </div>
+            {(() => {
+              const vfFields: ButtonBoxField[] = [
+                { label: 'Document Number', value: selectedIndianInvoice.docNo, valueClass: 'text-[#963F29] font-black' },
+                { label: 'Company Code', value: '1900 (IN)' },
+                { label: 'Customer ID', value: 'CUST-IN-401', valueClass: 'text-amber-700 font-bold' },
+              ];
+              return <OutputHeaderButtonBoxes fields={vfFields} className="border-2 border-[#963F29]" />;
+            })()}
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                Invoice Document Display Table
+              </h3>
+            </div>
+            <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                  <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
+                    <tr>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Doc No (BELNR)</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Company Code</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Customer ID</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Fiscal Year</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Billing Date</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Reference</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Net Value</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Gross Value</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Tax</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[120px]">Sales Office</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">Material</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">Quantity</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[80px]">Item No</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">PC/CC</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">Customer Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
+                    {filteredIndianInvoices.map((item, idx) => (
+                      <tr key={idx} className={`hover:bg-[#963F29]/5 transition-all ${item.docNo === selectedIndianInvoice.docNo ? 'bg-[#963F29]/10' : ''}`}>
+                        <td className="p-3 font-mono font-bold text-[#963F29]">{item.docNo}</td>
+                        <td className="p-3 font-mono text-slate-600">1900</td>
+                        <td className="p-3 font-mono font-bold text-amber-700">CUST-IN-401</td>
+                        <td className="p-3 font-mono text-slate-600">2026</td>
+                        <td className="p-3 font-mono text-slate-600">2026-07-15</td>
+                        <td className="p-3 font-mono text-slate-600">{billingReference || `REF-IN-9100${idx + 1}`}</td>
+                        <td className="p-3 font-mono font-bold text-emerald-750 text-right">{item.netValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 font-mono font-bold text-[#273B5E] text-right">{(item.netValue + item.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-right font-mono font-bold text-[#963F29]">
+                          {item.tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-3 font-bold text-slate-800">{item.salesOffice}</td>
+                        <td className="p-3 font-bold text-slate-850">
+                          <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
+                          {item.material}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-500">{item.itemNo}</td>
+                        <td className="p-3 font-mono font-bold text-slate-600">{item.pcCc}</td>
+                        <td className="p-3">
+                          <div className="space-y-1 font-sans text-xs">
+                            <p className="font-bold text-[#273B5E]">{item.customerName}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">GSTIN: <span className="font-bold">{item.customerGstin}</span></p>
+                            <p className="text-[10px] text-slate-400">State: <span className="font-bold">{item.customerState}</span></p>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      if (!activeVBRK) return (
+        <div className="p-6 text-center"><p className="text-slate-500 text-xs">Error loading invoice.</p></div>
+      );
+
+      return (
+        <div className="p-6 space-y-6 select-none">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4 pr-10 sm:pr-12">
+            <div>
+              <h2 className="text-lg font-sans font-bold text-[#273B5E]">Invoice Document Details (VF03)</h2>
+              <p className="text-xs text-slate-500 font-mono mt-0.5">Invoice (VBELN): {activeVBRK.VBELN} | Company Code: {activeVBRK.BUKRS}</p>
+            </div>
+            <button onClick={() => onNavigate('INVOICE_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /><span>Invoice Selection</span>
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#273B5E] rounded-full" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Billing Transaction Summary (VBRK)
+              </h3>
+            </div>
+            {(() => {
+              const vfFields: ButtonBoxField[] = [
+                { label: 'Document Number', value: activeVBRK.VBELN, highlight: true, valueClass: 'text-[#273B5E] font-black' },
+                { label: 'Company Code', value: activeVBRK.BUKRS },
+                { label: 'Customer ID', value: activeVBRK.KUNRG, valueClass: 'text-amber-700 font-bold' },
+              ];
+              return <OutputHeaderButtonBoxes fields={vfFields} tcode="VF03" />;
+            })()}
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-[#273B5E] rounded-full" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-sans">
+                Invoice Line Items Display Details
+              </h3>
+            </div>
+            <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
+              <TableToolbar searchTerm={searchTerm} onSearchChange={setSearchTerm} totalRecords={activeVBRPItems.length} />
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700">
+                    <tr>
+                      <th className="p-3 font-mono">Item POSNR</th>
+                      <th className="p-3 font-mono">Material Code</th>
+                      <th className="p-3">Material Description</th>
+                      <th className="p-3 text-right font-mono">Quantity</th>
+                      <th className="p-3 font-mono text-center">Unit</th>
+                      <th className="p-3 font-mono">Fiscal Year</th>
+                      <th className="p-3 font-mono">Billing Date</th>
+                      <th className="p-3 font-mono">Reference</th>
+                      <th className="p-3 text-right font-mono">Net Value</th>
+                      <th className="p-3 text-right font-mono text-rose-500">Calculated Tax</th>
+                      <th className="p-3 text-right font-mono font-bold text-[#273B5E]">Total Item Value</th>
+                      <th className="p-3 font-mono text-center">Profit Center</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {activeVBRPItems.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="p-3 font-mono font-bold text-slate-400">{item.POSNR}</td>
+                        <td className="p-3 font-mono font-bold text-[#273B5E]">{item.MATNR}</td>
+                        <td className="p-3 font-medium text-slate-800">{item.ARKTX}</td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900">{item.FKIMG.toLocaleString()}</td>
+                        <td className="p-3 text-center font-bold text-slate-400">{item.VRKME}</td>
+                        <td className="p-3 font-mono">{activeVBRK.FKDAT.split('-')[0] || '2026'}</td>
+                        <td className="p-3 font-mono">{activeVBRK.FKDAT}</td>
+                        <td className="p-3 font-mono">{billingReference || 'REF-US-90001'}</td>
+                        <td className="p-3 text-right font-mono">${item.NETWR.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-right font-mono text-rose-500">${item.MWSBP.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-right font-mono font-bold text-[#273B5E]">${(item.NETWR + item.MWSBP).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-center font-mono text-slate-500">{item.PRCTR || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
   // ============================================================================
   // RENDERING LOGIC
   // ============================================================================
@@ -227,10 +747,10 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
         </div>
 
         {/* Database Localization Context Panel */}
-        <div className="bg-orange-500/5 border-2 border-orange-500/30 border-l-8 border-l-orange-500 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="bg-[#963F29]/5 border-2 border-[#963F29]/30 border-l-8 border-l-[#963F29] rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white border-2 border-orange-500/20 text-orange-600 rounded-lg shadow-sm">
-              <Database className="w-5 h-5 text-orange-600" />
+            <div className="p-2.5 bg-white border-2 border-[#963F29]/20 text-[#963F29] rounded-lg shadow-sm">
+              <Database className="w-5 h-5 text-[#963F29]" />
             </div>
             <div>
               <span className="text-[10px] font-black text-slate-500 font-mono block tracking-wider uppercase">SAP Database Localization Context</span>
@@ -240,7 +760,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider shadow-sm select-none">
+            <span className="bg-[#963F29] text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider shadow-sm select-none">
               India Region Active
             </span>
           </div>
@@ -427,7 +947,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
         {/* Modal Overlay for Report Details */}
         {activeScreen === 'FIN_DOC_REP' && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-4 sm:p-6 md:p-10 animate-fade-in">
-            <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative border border-slate-200">
+            <div className={`bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative border-2 ${isIndianDb ? 'border-[#963F29]' : 'border-slate-200'}`}>
               <button
                 onClick={() => onNavigate('FIN_DOC_SEL')}
                 className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all z-50"
@@ -435,313 +955,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
               >
                 <X className="w-5 h-5" />
               </button>
-
-              {isIndianDb ? (() => {
-                const selectedIndianInvoice = indianInvoices.find((i) => i.docNo === docNumber.trim()) || indianInvoices[0];
-                if (!selectedIndianInvoice) {
-                  return (
-                    <div className="p-6 text-center select-none font-sans">
-                      <p className="text-slate-500 text-xs">Error loading Indian localized financial document.</p>
-                      <button onClick={() => onNavigate('FIN_DOC_SEL')} className="bg-slate-800 text-white px-4 py-2 text-xs rounded mt-3">Back</button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="p-6 space-y-6 select-none animate-fade-in">
-                    {/* Header navigation bar */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-orange-200 pb-4 pr-10 sm:pr-12">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-[#273B5E]" />
-                          <h2 className="text-lg font-sans font-black text-[#273B5E]">Financial Document Details</h2>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => onNavigate('FIN_DOC_SEL')}
-                        className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-orange-200 rounded-lg text-xs text-orange-750 hover:bg-orange-50 font-black transition-colors"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5" />
-                        <span>Document Selection</span>
-                      </button>
-                    </div>
-
-                    <div>
-                      {(() => {
-                        const fbFields: ButtonBoxField[] = [
-                          { label: 'Document Number', value: selectedIndianInvoice.docNo, highlight: true, valueClass: 'text-orange-700 font-black' },
-                          { label: 'Company Code', value: '1900 (IN)' },
-                          { label: 'Customer ID', value: 'CUST-IN-401', valueClass: 'text-amber-700 font-bold' },
-                          { label: 'Doc Date', value: '2026-07-15' },
-                          { label: 'Posting Date', value: '2026-07-15' },
-                          { label: 'Period', value: '07' },
-                          { label: 'Reference', value: 'REF-IN-91001' },
-                          { label: 'Currency', value: 'INR (Rupee)', valueClass: 'text-emerald-700 font-bold' },
-                          { label: 'Fiscal Year', value: '2026' },
-                        ];
-                        return (
-                          <OutputHeaderButtonBoxes
-                            fields={fbFields}
-                            title="FINANCIAL DOCUMENT TRANSACTION CONTEXT"
-                          />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Table section */}
-                    <div className="bg-white rounded-lg border-2 border-orange-200 overflow-hidden shadow-sm">
-                      <div className="bg-orange-50 p-4 border-b border-orange-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-black text-orange-800 uppercase tracking-wider font-mono">
-                            FINANCIAL DOCUMENT DISPLAY
-                          </h4>
-                        </div>
-                        {/* Right side toolbar placeholder */}
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead className="bg-slate-100 border-b-2 border-orange-200 text-slate-800">
-                            <tr>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Document Number</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Company Code</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">Fiscal Year</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Reference Key</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">Currency</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Amount</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">Material</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">Quantity</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[70px]">Period</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">Customer Details</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
-                            {filteredIndianInvoices.map((item, idx) => (
-                              <tr key={idx} className={`hover:bg-orange-50/20 transition-all ${item.docNo === selectedIndianInvoice.docNo ? 'bg-orange-50/40' : ''}`}>
-                                <td className="p-3 font-mono font-bold text-orange-700">{item.docNo}</td>
-                                <td className="p-3 font-mono text-slate-600">1900</td>
-                                <td className="p-3 font-mono text-slate-600">2026</td>
-                                <td className="p-3 font-mono text-slate-600">REF-IN-9100{idx + 1}</td>
-                                <td className="p-3 font-mono text-slate-500">INR</td>
-                                <td className="p-3 font-mono font-bold text-emerald-750 text-right">
-                                  {item.netValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="p-3 font-bold text-slate-850">
-                                  <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{item.itemNo}</span>
-                                  {item.material}
-                                </td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-500">07</td>
-                                <td className="p-3">
-                                  <div className="space-y-1 font-sans text-xs">
-                                    <p className="font-bold text-[#273B5E]">{item.customerName}</p>
-                                    <p className="text-[10px] text-slate-500 font-mono">GSTIN: <span className="font-bold">{item.customerGstin}</span></p>
-                                    <p className="text-[10px] text-slate-400">State: <span className="font-bold">{item.customerState}</span></p>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })() : (() => {
-                if (!activeBKPF) {
-                  return (
-                    <div className="p-6 text-center select-none font-sans">
-                      <p className="text-slate-500 text-xs">Error loading document. Returning...</p>
-                      <button onClick={() => onNavigate('FIN_DOC_SEL')} className="bg-slate-800 text-white px-4 py-2 text-xs rounded mt-3">Back</button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="p-6 space-y-6 select-none">
-                    {/* Header toolbar */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4 pr-10 sm:pr-12">
-                      <div>
-                        <h2 className="text-lg font-sans font-bold text-[#273B5E]">Financial Document Details (FB03)</h2>
-                      </div>
-                      <button
-                        onClick={() => onNavigate('FIN_DOC_SEL')}
-                        className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5" />
-                        <span>Document Selection</span>
-                      </button>
-                    </div>
-
-                    {/* BKPF Header Details metadata */}
-                    {(() => {
-                      const fbFields: ButtonBoxField[] = [
-                        { label: 'Doc Number', value: activeBKPF.BELNR, highlight: true, valueClass: 'text-rose-600' },
-                        { label: 'Net Value', value: `$${bkpfSums.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, valueClass: 'text-emerald-600' },
-                        { label: 'Billing Date', value: activeBKPF.BLDAT },
-                        { label: 'Doc Type (BLART)', value: activeBKPF.BLART, badge: 'HEADER TYPE' },
-                        { label: 'Currency', value: activeBKPF.WAERS, valueClass: 'text-amber-600' },
-                        { label: 'Company Code', value: activeBKPF.BUKRS },
-                        { label: 'Fiscal Year', value: activeBKPF.GJAHR },
-                        { label: 'Tax Value (Est)', value: `$${(bkpfSums.debit * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}` },
-                        { label: 'Reference', value: activeBKPF.XBLNR || 'NONE', valueClass: 'text-[#963F29]' },
-                      ];
-                      return (
-                        <div className="space-y-4">
-                          <OutputHeaderButtonBoxes
-                            fields={fbFields}
-                            title="HEADER INFORMATION (SAP TABLE BKPF)"
-                            tcode="FB03"
-                          />
-                          <div className="bg-slate-50 border border-[#D9DEE6] rounded-lg p-3 text-xs flex gap-1.5">
-                            <span className="text-slate-500 font-bold uppercase font-mono text-[10px]">Header Text (BKTXT):</span>
-                            <span className="text-slate-700 italic font-medium">{activeBKPF.BKTXT || 'No header text assigned'}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Ledger Segment Summary Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="bg-white border border-[#D9DEE6] p-4 rounded-lg shadow-sm">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">Accumulated Debit</span>
-                        <span className="text-lg font-mono font-bold text-slate-800 mt-1 block">
-                          ${bkpfSums.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {activeBKPF.WAERS}
-                        </span>
-                      </div>
-                      <div className="bg-white border border-[#D9DEE6] p-4 rounded-lg shadow-sm">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">Accumulated Credit</span>
-                        <span className="text-lg font-mono font-bold text-slate-800 mt-1 block">
-                          ${bkpfSums.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {activeBKPF.WAERS}
-                        </span>
-                      </div>
-                      <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg shadow-sm">
-                        <span className="text-[10px] font-bold text-emerald-700 uppercase font-mono block">Document Balance Status</span>
-                        <span className="text-lg font-mono font-bold text-emerald-700 mt-1 block flex items-center gap-1.5">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                          <span>Balanced (0.00)</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Line Segment Segment BSEG table */}
-                    <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
-                      <TableToolbar
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        totalRecords={activeBSEGItems.length}
-                      />
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead className="bg-slate-100 border-b-2 border-orange-200 text-slate-800">
-                            <tr>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[150px] align-top">
-                                <div className="text-xs font-black">Doc No (BELNR)</div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[240px] align-top">
-                                <div className="text-xs font-black">Net Value</div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[240px] align-top">
-                                <div className="text-xs font-black">Material</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Commercial description and corporate product identification index)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[160px] align-top">
-                                <div className="text-xs font-black">Quantity</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Physical weight unit in Metric Tons)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-center min-w-[130px] align-top">
-                                <div className="text-xs font-black">Item No</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Line-item position index)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[160px] align-top">
-                                <div className="text-xs font-black">PC/CC</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Assigned profit center or cost center allocation codes)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide text-right min-w-[180px] align-top">
-                                <div className="text-xs font-black">Tax</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Standard corporate tax distribution amount)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[180px] align-top">
-                                <div className="text-xs font-black">Sales Office</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Registered geographical department handling distribution)
-                                </div>
-                              </th>
-                              <th className="p-4 font-black text-[#273B5E] uppercase tracking-wide min-w-[220px] align-top">
-                                <div className="text-xs font-black">Customer Details</div>
-                                <div className="text-[10px] text-slate-500 font-medium normal-case tracking-normal leading-tight font-sans mt-0.5">
-                                  (Registered entity name and geographic region details)
-                                </div>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200 text-slate-700">
-                            {activeBSEGItems.map((item, idx) => {
-                              // Resolve custom label based on account types
-                              let partnerLabel = 'G/L Ledger Split';
-                              if (item.KOART === 'D' && item.KUNNR) {
-                                const c = dbKNA1.find(cu => cu.KUNNR === item.KUNNR);
-                                partnerLabel = c ? c.NAME1 : item.KUNNR;
-                              } else if (item.KOART === 'K' && item.LIFNR) {
-                                const v = dbLFA1.find(ve => ve.LIFNR === item.LIFNR);
-                                partnerLabel = v ? v.NAME1 : item.LIFNR;
-                              }
-
-                              // Make values realistic in Indian numbering notation
-                              const inrValue = item.WRBTR * 83;
-                              const formattedInrValue = `₹${inrValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-                              const formattedInrTax = `₹${(inrValue * 0.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-
-                              const calculatedQty = `${((item.WRBTR / 100) || 5.5).toFixed(1)} MT`;
-                              const assignedPcCc = item.PRCTR || item.KOSTL || 'PC-MUM-01';
-                              const resolvedMaterial = item.SGTXT || 'Mild Steel Tubes';
-                              const resolvedSalesOffice = idx % 2 === 0 ? 'Mumbai (IN-WEST)' : 'Delhi (IN-NORTH)';
-
-                              return (
-                                <tr key={idx} className="hover:bg-orange-50/20 transition-all">
-                                  <td className="p-4 font-mono font-black text-orange-700">{activeBKPF.BELNR}</td>
-                                  <td className="p-4 font-mono font-black text-emerald-750 text-right">
-                                    {formattedInrValue}
-                                  </td>
-                                  <td className="p-4 font-black text-slate-850">
-                                    <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
-                                    {resolvedMaterial}
-                                  </td>
-                                  <td className="p-4 text-right font-mono font-black text-slate-900">{calculatedQty}</td>
-                                  <td className="p-4 text-center font-mono font-black text-slate-500">{item.BUZEI}</td>
-                                  <td className="p-4 font-mono font-black text-slate-600">{assignedPcCc}</td>
-                                  <td className="p-4 text-right font-mono font-black text-orange-600">
-                                    {formattedInrTax}
-                                    <span className="block text-[10px] text-slate-400 font-normal font-sans">18% Standard Tax</span>
-                                  </td>
-                                  <td className="p-4 font-black text-slate-850">{resolvedSalesOffice}</td>
-                                  <td className="p-4">
-                                    <div className="space-y-1 font-sans text-xs">
-                                      <p className="font-black text-[#273B5E]">{partnerLabel}</p>
-                                      <p className="text-[10px] text-slate-500 font-mono">Tax Region: <span className="font-bold">Maharashtra</span></p>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              {renderFinancialReport()}
             </div>
           </div>
         )}
@@ -773,7 +987,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   placeholder="e.g. 1800091001"
                   value={billingDocNumber}
                   onChange={(e) => setBillingDocNumber(e.target.value)}
-                  className={`w-full bg-white border-2 rounded p-3 text-sm font-mono font-black tracking-wide ${isIndianDb ? 'border-orange-300 focus:border-orange-500 text-orange-800' : 'border-[#D9DEE6] focus:border-[#273B5E]'}`}
+                  className={`w-full bg-white border-2 rounded p-3 text-sm font-mono font-black tracking-wide ${isIndianDb ? 'border-[#963F29]/40 focus:border-[#963F29] text-[#963F29]' : 'border-[#D9DEE6] focus:border-[#273B5E]'}`}
                 />
               </div>
 
@@ -851,7 +1065,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   <button
                     id="btn-vf03-display"
                     onClick={() => onNavigate('INVOICE_REP')}
-                    className={`px-5 py-2 text-white rounded text-xs font-semibold flex items-center gap-1 transition-colors ${isIndianDb ? 'bg-orange-600 hover:bg-orange-700' : 'bg-[#273B5E] hover:bg-[#3d5680]'}`}
+                    className={`px-5 py-2 text-white rounded text-xs font-semibold flex items-center gap-1 transition-colors ${isIndianDb ? 'bg-[#963F29] hover:bg-[#85341f]' : 'bg-[#273B5E] hover:bg-[#3d5680]'}`}
                   >
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     <span>Invoice Display</span>
@@ -865,7 +1079,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
         {/* Modal Overlay for Invoice Report */}
         {activeScreen === 'INVOICE_REP' && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-4 sm:p-6 md:p-10 animate-fade-in">
-            <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative border border-slate-200">
+            <div className={`bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative border-2 ${isIndianDb ? 'border-[#963F29]' : 'border-slate-200'}`}>
               <button
                 onClick={() => onNavigate('INVOICE_SEL')}
                 className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all z-50"
@@ -873,160 +1087,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
               >
                 <X className="w-5 h-5" />
               </button>
-
-              {isIndianDb ? (() => {
-                const selectedIndianInvoice = activeIndianInvoice || indianInvoices.find(i => i.docNo === billingDocNumber.trim()) || indianInvoices[0];
-                if (!selectedIndianInvoice) return (
-                  <div className="p-6 text-center"><p className="text-slate-500 text-xs">Error loading Indian invoice.</p></div>
-                );
-                return (
-                  <div className="p-6 space-y-6 select-none animate-fade-in">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-orange-200 pb-4 pr-10 sm:pr-12">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-[#273B5E]" />
-                          <h2 className="text-lg font-sans font-black text-[#273B5E]">Invoice Document Details</h2>
-                        </div>
-                      </div>
-                      <button onClick={() => onNavigate('INVOICE_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-orange-200 rounded-lg text-xs hover:bg-orange-50 font-black transition-colors">
-                        <ArrowLeft className="w-3.5 h-3.5" /><span>Invoice Selection</span>
-                      </button>
-                    </div>
-                    <div>
-                      {(() => {
-                        const vfFields: ButtonBoxField[] = [
-                          { label: 'Document Number', value: selectedIndianInvoice.docNo, highlight: true, valueClass: 'text-orange-700 font-black' },
-                          { label: 'Customer ID', value: 'CUST-IN-401', valueClass: 'text-amber-700 font-bold' },
-                          { label: 'Fiscal Year', value: '2026' },
-                          { label: 'Net Value', value: `${selectedIndianInvoice.netValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, valueClass: 'text-emerald-700 font-black' },
-                          { label: 'Gross Value', value: `${(selectedIndianInvoice.netValue + selectedIndianInvoice.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, valueClass: 'text-[#273B5E] font-black' },
-                          { label: 'Tax', value: `${selectedIndianInvoice.tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, valueClass: 'text-orange-700 font-bold' },
-                          { label: 'Billing Date', value: '2026-07-15' },
-                          { label: 'Company Code', value: '1900 (IN)' },
-                          { label: 'Reference', value: billingReference || 'REF-IN-91001' },
-                        ];
-                        return <OutputHeaderButtonBoxes fields={vfFields} title="🇮🇳 INDIAN LOCALIZED INVOICE" />;
-                      })()}
-                    </div>
-                    <div className="bg-white rounded-lg border-2 border-orange-200 overflow-hidden shadow-sm">
-                      <div className="bg-orange-50 p-4 border-b border-orange-200">
-                        <h4 className="text-xs font-black text-orange-800 uppercase tracking-wider font-mono">INVOICE DOCUMENT DISPLAY</h4>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead className="bg-slate-100 border-b-2 border-orange-200 text-slate-800">
-                            <tr>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Doc No (BELNR)</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Net Value</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Tax</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[120px]">Sales Office</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">Material</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">Quantity</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[80px]">Item No</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">PC/CC</th>
-                              <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">Customer Details</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
-                            {filteredIndianInvoices.map((item, idx) => (
-                              <tr key={idx} className={`hover:bg-orange-50/20 transition-all ${item.docNo === selectedIndianInvoice.docNo ? 'bg-orange-50/40' : ''}`}>
-                                <td className="p-3 font-mono font-bold text-orange-700">{item.docNo}</td>
-                                <td className="p-3 font-mono font-bold text-emerald-750 text-right">{item.netValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-3 text-right font-mono font-bold text-orange-600">
-                                  {item.tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="p-3 font-bold text-slate-800">{item.salesOffice}</td>
-                                <td className="p-3 font-bold text-slate-850">
-                                  <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
-                                  {item.material}
-                                </td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-500">{item.itemNo}</td>
-                                <td className="p-3 font-mono font-bold text-slate-600">{item.pcCc}</td>
-                                <td className="p-3">
-                                  <div className="space-y-1 font-sans text-xs">
-                                    <p className="font-bold text-[#273B5E]">{item.customerName}</p>
-                                    <p className="text-[10px] text-slate-500 font-mono">GSTIN: <span className="font-bold">{item.customerGstin}</span></p>
-                                    <p className="text-[10px] text-slate-400">State: <span className="font-bold">{item.customerState}</span></p>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })() : (() => {
-                if (!activeVBRK) return (
-                  <div className="p-6 text-center"><p className="text-slate-500 text-xs">Error loading invoice.</p></div>
-                );
-                return (
-                  <div className="p-6 space-y-6 select-none">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4 pr-10 sm:pr-12">
-                      <div>
-                        <h2 className="text-lg font-sans font-bold text-[#273B5E]">Invoice Document Details (VF03)</h2>
-                        <p className="text-xs text-slate-500 font-mono mt-0.5">Invoice (VBELN): {activeVBRK.VBELN} | Company Code: {activeVBRK.BUKRS}</p>
-                      </div>
-                      <button onClick={() => onNavigate('INVOICE_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors">
-                        <ArrowLeft className="w-3.5 h-3.5" /><span>Invoice Selection</span>
-                      </button>
-                    </div>
-                    <div>
-                      {(() => {
-                        const vfFields: ButtonBoxField[] = [
-                          { label: 'Document Number', value: activeVBRK.VBELN, highlight: true, valueClass: 'text-[#273B5E] font-black' },
-                          { label: 'Customer ID', value: activeVBRK.KUNRG, valueClass: 'text-amber-700 font-bold' },
-                          { label: 'Fiscal Year', value: activeVBRK.FKDAT.split('-')[0] || '2026' },
-                          { label: 'Net Value', value: `$${activeVBRK.NETWR.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, valueClass: 'text-emerald-600 font-bold' },
-                          { label: 'Currency', value: activeVBRK.WAERK, valueClass: 'text-emerald-600 font-bold' },
-                          { label: 'Tax', value: `$${activeVBRK.MWSBK.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, valueClass: 'text-orange-700 font-bold', badge: 'TAX VALUE' },
-                          { label: 'Billing Date', value: activeVBRK.FKDAT },
-                          { label: 'Company Code', value: activeVBRK.BUKRS },
-                          { label: 'Reference', value: billingReference || 'REF-US-90001' },
-                        ];
-                        return <OutputHeaderButtonBoxes fields={vfFields} title="BILLING TRANSACTION SUMMARY (VBRK)" tcode="VF03" />;
-                      })()}
-                    </div>
-                    <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
-                      <TableToolbar searchTerm={searchTerm} onSearchChange={setSearchTerm} totalRecords={activeVBRPItems.length} />
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700">
-                            <tr>
-                              <th className="p-3 font-mono">Item POSNR</th>
-                              <th className="p-3 font-mono">Material Code</th>
-                              <th className="p-3">Material Description</th>
-                              <th className="p-3 text-right font-mono">Quantity</th>
-                              <th className="p-3 font-mono text-center">Unit</th>
-                              <th className="p-3 text-right font-mono">Net Value</th>
-                              <th className="p-3 text-right font-mono">Calculated Tax</th>
-                              <th className="p-3 text-right font-mono font-bold">Total Item Value</th>
-                              <th className="p-3 font-mono text-center">Profit Center</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 text-slate-700">
-                            {activeVBRPItems.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-slate-50/50">
-                                <td className="p-3 font-mono font-bold text-slate-400">{item.POSNR}</td>
-                                <td className="p-3 font-mono font-bold text-[#273B5E]">{item.MATNR}</td>
-                                <td className="p-3 font-medium text-slate-800">{item.ARKTX}</td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.FKIMG.toLocaleString()}</td>
-                                <td className="p-3 text-center font-bold text-slate-400">{item.VRKME}</td>
-                                <td className="p-3 text-right font-mono">${item.NETWR.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                <td className="p-3 text-right font-mono text-rose-500">${item.MWSBP.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                <td className="p-3 text-right font-mono font-bold text-[#273B5E]">${(item.NETWR + item.MWSBP).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                <td className="p-3 text-center font-mono text-slate-500">{item.PRCTR || '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              {renderInvoiceReport()}
             </div>
           </div>
         )}

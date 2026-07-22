@@ -65,6 +65,7 @@ import { SAPMappingPanel } from './components/SAPMappingPanel/SAPMappingPanel';
 export default function App() {
   // Session Authentication state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
   // Navigation Router state
   const [activeScreen, setActiveScreen] = useState<Screen>('DASHBOARD');
@@ -112,6 +113,7 @@ export default function App() {
         setCurrentUser(fallbackUser);
       }
     }
+    setIsSessionLoaded(true);
   }, [usersList]);
 
   // Collapse sidebar by default on mobile/tablet screens
@@ -128,6 +130,8 @@ export default function App() {
 
   // Synchronize state with URL slug
   useEffect(() => {
+    if (!isSessionLoaded) return;
+
     const handlePopState = () => {
       let path = window.location.pathname;
       const basePath = path.startsWith('/app.eltech') ? '/app.eltech' : '';
@@ -140,6 +144,9 @@ export default function App() {
       if (!currentUser && targetScreen !== 'LOGIN') {
         setActiveScreen('LOGIN');
         window.history.replaceState(null, '', `${basePath}/login`);
+      } else if (currentUser && targetScreen === 'LOGIN') {
+        setActiveScreen('DASHBOARD');
+        window.history.replaceState(null, '', `${basePath}/dashboard`);
       } else {
         setActiveScreen(targetScreen);
       }
@@ -149,7 +156,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentUser]);
+  }, [currentUser, isSessionLoaded]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -226,7 +233,9 @@ export default function App() {
               onShowHelp={() => setShowBlueprint(true)}
               onToggleSidebar={() => setSidebarCollapsed((prev) => !prev)}
             />
-            <Breadcrumbs activeScreen={activeScreen} onNavigate={handleNavigate} />
+            {activeScreen !== 'LOGIN' && (
+              <Breadcrumbs activeScreen={activeScreen} onNavigate={handleNavigate} />
+            )}
           </>
         )}
 

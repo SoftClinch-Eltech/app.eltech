@@ -451,11 +451,12 @@ interface OutputHeaderButtonBoxesProps {
   fields: ButtonBoxField[];
   title?: string;
   tcode?: string;
+  className?: string;
 }
 
-export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode }) => {
+export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode, className }) => {
   return (
-    <div className="bg-white border border-[#D9DEE6] rounded-xl shadow-sm p-4 space-y-3 select-none">
+    <div className={`bg-white border rounded-xl shadow-sm p-4 space-y-3 select-none ${className || 'border-[#D9DEE6]'}`}>
       {title && (
         <div className="flex justify-between items-center border-b border-slate-100 pb-2">
           <span className="text-[11px] font-bold text-[#273B5E] uppercase tracking-wider font-sans">
