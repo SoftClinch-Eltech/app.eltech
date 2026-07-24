@@ -22,8 +22,76 @@ import {
   Database,
   Truck,
   FileText,
+  RefreshCw,
   X
 } from 'lucide-react';
+
+export interface FinancialDocumentHeader {
+  documentno: string;
+  cocode: string;
+  fiscal_yr: number;
+  doc_date: string;
+  pstng_date: string;
+  period: number;
+  ref_key: string;
+  currency: string;
+}
+
+export interface FinancialDocumentLineItem {
+  documentno: string;
+  cocode: string;
+  fiscal_yr1: number;
+  amount_lc: number;
+  material: string;
+  quantity: number;
+  customer: string;
+  profit_ctr: string;
+  cost_ctr: string;
+}
+
+export interface FinancialDocumentResult {
+  fiscal_yr: number;
+  document_header: FinancialDocumentHeader;
+  line_items: FinancialDocumentLineItem[];
+}
+
+export interface FinancialDocumentApiResponse {
+  documentno: string;
+  cocode: string;
+  results: FinancialDocumentResult[];
+}
+
+export interface InvoiceDocumentHeader {
+  bill_doc: string;
+  cocode: string;
+  fiscal_yr: number;
+  net: number;
+  tax: number;
+  bill_date: string;
+  sold_to_pt?: string;
+}
+
+export interface InvoiceLineItem {
+  line_item?: string;
+  profit_ctr?: string;
+  cost_ctr?: string;
+  material: string;
+  sales_off?: string;
+  gross_val?: number;
+  bill_qty?: number;
+}
+
+export interface InvoiceResultItem {
+  fiscal_yr: number;
+  document_header: InvoiceDocumentHeader;
+  line_items: InvoiceLineItem[];
+}
+
+export interface InvoiceApiResponse {
+  invoice_number: string;
+  cocode?: string;
+  results: InvoiceResultItem[];
+}
 
 interface DocumentDisplayModuleProps {
   activeScreen: Screen;
@@ -104,12 +172,12 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
   // FORM STATE SELECTIONS
   // ============================================================================
   const [billingDocNumber, setBillingDocNumber] = useState(''); // Billing Doc ref for FB03
-  const [docNumber, setDocNumber] = useState('1800091001'); // Default to Indian Customer Invoice
-  const [companyCode, setCompanyCode] = useState('1900');
-  const [fiscalYear, setFiscalYear] = useState('2026');
+  const [docNumber, setDocNumber] = useState('2624600402'); // Valid DB Financial Document Number
+  const [companyCode, setCompanyCode] = useState('6000'); // Valid DB Company Code
+  const [fiscalYear, setFiscalYear] = useState(''); // Optional Fiscal Year
   const [reference, setReference] = useState('');
 
-  const [invoiceNumber, setInvoiceNumber] = useState('1800091001'); // Default to Indian Invoice
+  const [invoiceNumber, setInvoiceNumber] = useState('6242002595'); // Real Backend DB Invoice Number
   const [vf03DocNum, setVf03DocNum] = useState(''); // Document Number for VF03 screen
   const [billingCompanyCode, setBillingCompanyCode] = useState('1900');
   const [billingFiscalYear, setBillingFiscalYear] = useState('2026');
@@ -117,6 +185,115 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
 
   const [searchTerm, setSearchTerm] = useState('');
   const [formError, setFormError] = useState('');
+
+  // Backend API state integration
+  const [apiFinancialData, setApiFinancialData] = useState<FinancialDocumentApiResponse | null>(null);
+  const [loadingFinDoc, setLoadingFinDoc] = useState(false);
+
+  const handleFetchFinancialDocument = async () => {
+    if (!docNumber.trim()) {
+      setFormError('Document Number is required.');
+      return;
+    }
+    if (!companyCode.trim()) {
+      setFormError('Company Code is required.');
+      return;
+    }
+
+    setLoadingFinDoc(true);
+    setFormError('');
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+      let url = `${baseUrl}/api/document-display/financial-document/?documentno=${encodeURIComponent(docNumber.trim())}&cocode=${encodeURIComponent(companyCode.trim())}`;
+      if (fiscalYear.trim()) {
+        url += `&fiscal_yr=${encodeURIComponent(fiscalYear.trim())}`;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+
+      const res = await fetch(url, { method: 'GET', headers });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = data.detail || (typeof data === 'object' ? JSON.stringify(data) : 'Failed to fetch financial document.');
+        setFormError(errorMsg);
+        setLoadingFinDoc(false);
+        return;
+      }
+
+      setApiFinancialData(data);
+      triggerToast(`Financial Document ${docNumber} fetched successfully from backend!`, 'success');
+      onNavigate('FIN_DOC_REP');
+    } catch (err: any) {
+      console.error('Error fetching financial document from backend API:', err);
+      setFormError('Failed to connect to backend Django API (http://localhost:8000). Please ensure Django backend server is running.');
+    } finally {
+      setLoadingFinDoc(false);
+    }
+  };
+
+  // Invoice Backend API State & Handler
+  const [apiInvoiceData, setApiInvoiceData] = useState<InvoiceApiResponse | null>(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
+
+  const handleFetchInvoice = async () => {
+    if (!invoiceNumber.trim()) {
+      setFormError('Invoice Number is mandatory.');
+      return;
+    }
+
+    setLoadingInvoice(true);
+    setFormError('');
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+      let url = `${baseUrl}/api/document-display/invoice/?invoice_number=${encodeURIComponent(invoiceNumber.trim())}`;
+      if (companyCode.trim()) {
+        url += `&cocode=${encodeURIComponent(companyCode.trim())}`;
+      }
+      if (fiscalYear.trim()) {
+        url += `&fiscal_yr=${encodeURIComponent(fiscalYear.trim())}`;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+
+      const res = await fetch(url, { method: 'GET', headers });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = data.detail || (typeof data === 'object' ? JSON.stringify(data) : 'Failed to fetch invoice document.');
+        setFormError(errorMsg);
+        setApiInvoiceData(null);
+        setLoadingInvoice(false);
+        return;
+      }
+
+      setApiInvoiceData(data);
+      triggerToast(`Invoice ${invoiceNumber} fetched successfully from backend!`, 'success');
+      onNavigate('INVOICE_REP');
+    } catch (err: any) {
+      console.error('Error fetching invoice from backend API:', err);
+      setFormError('Failed to connect to backend Django API (http://localhost:8000). Please ensure Django backend server is running.');
+      setApiInvoiceData(null);
+    } finally {
+      setLoadingInvoice(false);
+    }
+  };
 
   // ============================================================================
   // SEARCH LOOKUP COMPUTATIONS (REAL FB03 & VF03 LINKED DATA)
@@ -197,6 +374,137 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
 
   // Export actions
   const renderFinancialReport = () => {
+    if (apiFinancialData && apiFinancialData.results && apiFinancialData.results.length > 0) {
+      return (
+        <div className="p-6 space-y-6 select-none animate-fade-in font-sans">
+          {/* Header navigation bar */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-[#963F29]/30 pb-4 pr-10 sm:pr-12">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#273B5E]" />
+                <h2 className="text-lg font-sans font-black text-[#273B5E]">Financial Document Details</h2>
+              </div>
+
+            </div>
+            <button
+              onClick={() => onNavigate('FIN_DOC_SEL')}
+              className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#963F29]/30 rounded-lg text-xs text-[#963F29] hover:bg-[#963F29]/5 font-black transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /><span>Document Selection</span>
+            </button>
+          </div>
+
+          {apiFinancialData.results.map((resultItem, resIdx) => {
+            const header = resultItem.document_header;
+            const lineItems = resultItem.line_items || [];
+            const customerIdVal = lineItems.find((i) => i.customer)?.customer || 'CUST-IN-401';
+
+            const filteredItems = lineItems.filter((item) => {
+              if (!searchTerm.trim()) return true;
+              const term = searchTerm.toLowerCase();
+              return (
+                (item.documentno && item.documentno.toLowerCase().includes(term)) ||
+                (item.material && item.material.toLowerCase().includes(term)) ||
+                (item.customer && item.customer.toLowerCase().includes(term)) ||
+                (item.profit_ctr && item.profit_ctr.toLowerCase().includes(term)) ||
+                (item.cost_ctr && item.cost_ctr.toLowerCase().includes(term))
+              );
+            });
+
+            // Top Header Boxes matching screenshot: Document Number, Company Code, Customer ID
+            const headerFields: ButtonBoxField[] = [
+              { label: 'Document Number', value: header.documentno || apiFinancialData.documentno, valueClass: 'text-[#963F29] font-black' },
+              { label: 'Company Code', value: header.cocode || apiFinancialData.cocode, valueClass: 'font-bold' },
+              { label: 'Customer ID', value: customerIdVal, valueClass: 'text-amber-700 font-bold' },
+            ];
+
+            return (
+              <div key={resIdx} className="space-y-6 font-sans select-none">
+                {/* Top Section: Transaction Context */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                      Financial Document Transaction Context
+                    </h3>
+                  </div>
+                  <OutputHeaderButtonBoxes fields={headerFields} className="border-2 border-[#963F29]" tcode="FB03" />
+                </div>
+
+                {/* Table Section: Display Table matching screenshot */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                      Financial Document Display Table
+                    </h3>
+                  </div>
+
+                  <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
+                    <TableToolbar
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      totalRecords={filteredItems.length}
+                    />
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                        <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
+                          <tr>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">DOCUMENTNO</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">COMPANY CODE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER ID</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">DOC_DATE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">POSTING_DATE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">FISCAL_YR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">REFERENCE_KEY</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">CURRENCY</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT_LC</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">MATERIAL</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">QUANTITY</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT_CTR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST_CTR</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
+                          {filteredItems.length === 0 ? (
+                            <tr>
+                              <td colSpan={13} className="p-6 text-center text-slate-400 italic font-sans">
+                                No line items found for this accounting document.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredItems.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-[#963F29]/5 transition-all">
+                                <td className="p-3 font-mono font-bold text-[#963F29]">{item.documentno || header.documentno}</td>
+                                <td className="p-3 font-mono text-slate-600">{item.cocode || header.cocode}</td>
+                                <td className="p-3 font-mono font-bold text-amber-700">{item.customer || customerIdVal}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.doc_date || 'N/A'}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.pstng_date || 'N/A'}</td>
+                                <td className="p-3 font-mono text-slate-600">{item.fiscal_yr1 || header.fiscal_yr}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.ref_key || 'NONE'}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.currency || 'INR'}</td>
+                                <td className="p-3 font-mono font-bold text-slate-900 text-right">
+                                  {Number(item.amount_lc).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-3 font-bold text-slate-800">{item.material || 'N/A'}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity != null ? Number(item.quantity).toLocaleString() : '0'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.profit_ctr || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.cost_ctr || '-'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (isIndianDb) {
       const selectedIndianInvoice = indianInvoices.find((i) => i.docNo === docNumber.trim()) || indianInvoices[0];
       if (!selectedIndianInvoice) {
@@ -217,7 +525,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 <FileText className="w-5 h-5 text-[#273B5E]" />
                 <h2 className="text-lg font-sans font-black text-[#273B5E]">Financial Document Details</h2>
               </div>
-    
+
             </div>
             <button onClick={() => onNavigate('FIN_DOC_SEL')} className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#963F29]/30 rounded-lg text-xs text-[#963F29] hover:bg-[#963F29]/5 font-black transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" /><span>Document Selection</span>
@@ -260,19 +568,19 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
                     <tr>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Doc No (BELNR)</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Company Code</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Customer ID</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Doc Date</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">Posting Date</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">Fiscal Year</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">Reference</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">Currency</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">Amount</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">Material</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">Quantity</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[70px]">Period</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">Customer Details</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">DOCUMENTNO</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">COMPANYCODE</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">DOC_DATE</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">PSTNG_DATE</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">FISCAL_YR</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">REF_KEY</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">CURRENCY</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT_LC</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">MATERIAL</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">QUANTITY</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT_CTR</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST_CTR</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
@@ -528,6 +836,145 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
   };
 
   const renderInvoiceReport = () => {
+    if (apiInvoiceData && apiInvoiceData.results && apiInvoiceData.results.length > 0) {
+      return (
+        <div className="p-6 space-y-6 select-none animate-fade-in font-sans">
+          {/* Header navigation bar */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b-2 border-[#963F29]/30 pb-4 pr-10 sm:pr-12">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#273B5E]" />
+                <h2 className="text-lg font-sans font-black text-[#273B5E]">Invoice Document Details</h2>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('INVOICE_SEL')}
+              className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#963F29]/30 rounded-lg text-xs text-[#963F29] hover:bg-[#963F29]/5 font-black transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /><span>Invoice Selection</span>
+            </button>
+          </div>
+
+          {apiInvoiceData.results.map((resultItem: InvoiceResultItem, resIdx: number) => {
+            const header = resultItem.document_header;
+            const lineItems = resultItem.line_items || [];
+            const customerIdVal = header.sold_to_pt || 'CUST-IN-401';
+
+            const filteredItems = lineItems.filter((item: InvoiceLineItem) => {
+              if (!searchTerm.trim()) return true;
+              const term = searchTerm.toLowerCase();
+              return (
+                (item.material && item.material.toLowerCase().includes(term)) ||
+                (item.sales_off && item.sales_off.toLowerCase().includes(term)) ||
+                (item.line_item && String(item.line_item).toLowerCase().includes(term)) ||
+                (item.profit_ctr && item.profit_ctr.toLowerCase().includes(term)) ||
+                (item.cost_ctr && item.cost_ctr.toLowerCase().includes(term)) ||
+                (header.bill_doc && header.bill_doc.toLowerCase().includes(term))
+              );
+            });
+
+            // Header Boxes: Invoice Number, Company Code, Customer ID
+            const headerFields: ButtonBoxField[] = [
+              { label: 'Invoice Number', value: header.bill_doc || apiInvoiceData.invoice_number, valueClass: 'text-[#963F29] font-black' },
+              { label: 'Company Code', value: header.cocode || apiInvoiceData.cocode || '6000', valueClass: 'font-bold' },
+              { label: 'Customer ID', value: customerIdVal, valueClass: 'text-amber-700 font-bold' },
+            ];
+
+            return (
+              <div key={resIdx} className="space-y-6 font-sans select-none">
+                {/* Top Section: Transaction Context */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                      Invoice Document Transaction Context
+                    </h3>
+                  </div>
+                  <OutputHeaderButtonBoxes fields={headerFields} className="border-2 border-[#963F29]" tcode="VF03" />
+                </div>
+
+                {/* Table Section: Display Table */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-4 bg-[#963F29] rounded-full" />
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-sans">
+                      Invoice Document Display Table
+                    </h3>
+                  </div>
+
+                  <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
+                    <TableToolbar
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      totalRecords={filteredItems.length}
+                    />
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                        <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
+                          <tr>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">BILL_DOC</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">COMPANY CODE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">SOLD_TO_PT</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">BILL_DATE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">FISCAL_YR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">NET VALUE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">TAX</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">GROSS_VAL</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">MATERIAL</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[120px]">SALES_OFF</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">BILL_QTY</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">ITEM NO</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT_CTR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST_CTR</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
+                          {filteredItems.length === 0 ? (
+                            <tr>
+                              <td colSpan={14} className="p-6 text-center text-slate-400 italic font-sans">
+                                No line items found for this invoice.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredItems.map((item: InvoiceLineItem, idx: number) => (
+                              <tr key={idx} className="hover:bg-[#963F29]/5 transition-all">
+                                <td className="p-3 font-mono font-bold text-[#963F29]">{header.bill_doc || apiInvoiceData.invoice_number}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.cocode || apiInvoiceData.cocode || '6000'}</td>
+                                <td className="p-3 font-mono font-bold text-amber-700">{customerIdVal}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.bill_date || 'N/A'}</td>
+                                <td className="p-3 font-mono text-slate-600">{header.fiscal_yr !== undefined && header.fiscal_yr !== null ? header.fiscal_yr : resultItem.fiscal_yr}</td>
+                                <td className="p-3 font-mono font-bold text-emerald-750 text-right">
+                                  {header.net != null ? Number(header.net).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                                <td className="p-3 font-mono font-bold text-[#963F29] text-right">
+                                  {header.tax != null ? Number(header.tax).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                                <td className="p-3 font-mono font-bold text-[#273B5E] text-right">
+                                  {item.gross_val != null ? Number(item.gross_val).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                                <td className="p-3 font-bold text-slate-800">{item.material || 'N/A'}</td>
+                                <td className="p-3 font-bold text-slate-700">{item.sales_off || 'N/A'}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-900">
+                                  {item.bill_qty != null ? Number(item.bill_qty).toLocaleString() : '0'}
+                                </td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.line_item || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.profit_ctr || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.cost_ctr || '-'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (isIndianDb) {
       const selectedIndianInvoice = activeIndianInvoice || indianInvoices.find(i => i.docNo === billingDocNumber.trim()) || indianInvoices[0];
       if (!selectedIndianInvoice) return (
@@ -827,7 +1274,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 <input
                   id="fb03-sel-num"
                   type="text"
-                  placeholder="e.g. 1800091001"
+                  placeholder="e.g. 2624600402 or 3624400050"
                   value={docNumber}
                   onChange={(e) => {
                     setDocNumber(e.target.value);
@@ -846,7 +1293,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   <input
                     id="fb03-sel-company"
                     type="text"
-                    placeholder="e.g. 1900"
+                    placeholder="e.g. 6000"
                     value={companyCode}
                     onChange={(e) => {
                       setCompanyCode(e.target.value);
@@ -862,7 +1309,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   <input
                     id="fb03-sel-year"
                     type="text"
-                    placeholder="e.g. 2026"
+                    placeholder="e.g. 2024"
                     value={fiscalYear}
                     onChange={(e) => {
                       setFiscalYear(e.target.value);
@@ -887,10 +1334,11 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                     onClick={() => {
                       setBillingDocNumber('');
                       setDocNumber('');
-                      setCompanyCode('1900');
+                      setCompanyCode('6000');
                       setFiscalYear('');
                       setReference('');
                       setFormError('');
+                      setApiFinancialData(null);
                     }}
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium"
                   >
@@ -898,45 +1346,21 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   </button>
                   <button
                     id="btn-fb03-display"
-                    onClick={() => {
-                      if (!docNumber.trim()) {
-                        setFormError('Document Number is required.');
-                        return;
-                      }
-                      if (!companyCode.trim()) {
-                        setFormError('Company Code is required.');
-                        return;
-                      }
-
-                      if (isIndianDb) {
-                        const matchedIn = indianInvoices.find((i) => i.docNo === docNumber.trim());
-                        if (!matchedIn) {
-                          setFormError(`Accounting Document ${docNumber} not found in Indian localization database. Try e.g. 1800091001, 1800091002, or 1800091003.`);
-                          return;
-                        }
-                        onNavigate('FIN_DOC_REP');
-                        return;
-                      }
-                      const matched = dbBKPF.find(
-                        (h) =>
-                          h.BELNR === docNumber.trim() &&
-                          h.BUKRS === companyCode.trim() &&
-                          (!fiscalYear.trim() || h.GJAHR === fiscalYear.trim())
-                      );
-                      if (!matched) {
-                        setFormError(
-                          fiscalYear.trim()
-                            ? `Accounting Document ${docNumber} not found in SAP BKPF table for BUKRS ${companyCode} / Year ${fiscalYear}.`
-                            : `Accounting Document ${docNumber} not found in SAP BKPF table for BUKRS ${companyCode}.`
-                        );
-                        return;
-                      }
-                      onNavigate('FIN_DOC_REP');
-                    }}
-                    className="px-5 py-2 bg-[#273B5E] hover:bg-[#3d5680] text-white rounded text-xs font-semibold flex items-center gap-1"
+                    disabled={loadingFinDoc}
+                    onClick={handleFetchFinancialDocument}
+                    className="px-5 py-2 bg-[#273B5E] hover:bg-[#3d5680] text-white rounded text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition-all active:scale-95"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Financial Display</span>
+                    {loadingFinDoc ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                        <span>Loading ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Financial Display</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -979,65 +1403,58 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs font-sans">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Billing Document</label>
-                <input
-                  id="vf03-sel-billing"
-                  type="text"
-                  placeholder="e.g. 1800091001"
-                  value={billingDocNumber}
-                  onChange={(e) => setBillingDocNumber(e.target.value)}
-                  className={`w-full bg-white border-2 rounded p-3 text-sm font-mono font-black tracking-wide ${isIndianDb ? 'border-[#963F29]/40 focus:border-[#963F29] text-[#963F29]' : 'border-[#D9DEE6] focus:border-[#273B5E]'}`}
-                />
-              </div>
+              {formError && (
+                <div className="p-3 bg-rose-50 text-[#963F29] border border-rose-200 rounded text-xs leading-relaxed font-sans font-semibold">
+                  ⚠️ {formError}
+                </div>
+              )}
 
+              {/* Field 1: Invoice Number (Mandatory) */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Number</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Invoice Number <span className="text-[#963F29] font-black">*</span>
+                </label>
                 <input
                   id="vf03-sel-num"
                   type="text"
-                  placeholder="e.g. 1800091001"
-                  value={docNumber}
-                  onChange={(e) => { setDocNumber(e.target.value); setFormError(''); }}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2.5 text-xs font-mono"
+                  placeholder="e.g. 6242002595"
+                  value={invoiceNumber}
+                  onChange={(e) => {
+                    setInvoiceNumber(e.target.value);
+                    setFormError('');
+                  }}
+                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2.5 text-xs font-mono font-bold"
                 />
               </div>
 
+              {/* Fields 2 & 3: Company Code + Fiscal Year (Optional) */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Company Code</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Company Code <span className="text-slate-400 font-medium">(Optional)</span>
+                  </label>
                   <input
                     id="vf03-sel-company"
                     type="text"
-                    placeholder="e.g. 1900"
+                    placeholder="e.g. 6000"
                     value={companyCode}
                     onChange={(e) => setCompanyCode(e.target.value)}
                     className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-bold"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fiscal Year</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Fiscal Year <span className="text-slate-400 font-medium">(Optional)</span>
+                  </label>
                   <input
                     id="vf03-sel-year"
                     type="text"
-                    placeholder="e.g. 2026"
+                    placeholder="e.g. 2024"
                     value={fiscalYear}
                     onChange={(e) => setFiscalYear(e.target.value)}
                     className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Reference</label>
-                <input
-                  id="vf03-sel-ref"
-                  type="text"
-                  placeholder="e.g. PO-2026-001"
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2.5 text-xs font-mono"
-                />
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-4 gap-3">
@@ -1051,11 +1468,9 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setBillingDocNumber('');
-                      setDocNumber('');
-                      setCompanyCode('1900');
-                      setFiscalYear('2026');
-                      setReference('');
+                      setInvoiceNumber('');
+                      setCompanyCode('');
+                      setFiscalYear('');
                       setFormError('');
                     }}
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs font-medium"
@@ -1064,11 +1479,21 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                   </button>
                   <button
                     id="btn-vf03-display"
-                    onClick={() => onNavigate('INVOICE_REP')}
-                    className={`px-5 py-2 text-white rounded text-xs font-semibold flex items-center gap-1 transition-colors ${isIndianDb ? 'bg-[#963F29] hover:bg-[#85341f]' : 'bg-[#273B5E] hover:bg-[#3d5680]'}`}
+                    disabled={loadingInvoice}
+                    onClick={handleFetchInvoice}
+                    className={`px-5 py-2 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 active:scale-95 ${isIndianDb ? 'bg-[#963F29] hover:bg-[#85341f]' : 'bg-[#273B5E] hover:bg-[#3d5680]'}`}
                   >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Invoice Display</span>
+                    {loadingInvoice ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                        <span>Loading API...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Invoice Display</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

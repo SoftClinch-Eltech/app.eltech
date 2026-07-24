@@ -502,11 +502,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
                   <button
                     disabled={isSectionDisabled}
                     onClick={() => !isSectionDisabled && toggleSection(section.title)}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white ${
-                      isSectionDisabled
+                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-white ${isSectionDisabled
                         ? 'cursor-not-allowed text-slate-400'
                         : 'hover:text-[#963F29] hover:bg-white/5'
-                    } transition-all select-none group mb-1`}
+                      } transition-all select-none group mb-1`}
                   >
                     <span className="text-xs uppercase tracking-wider font-bold font-sans">
                       {section.title}
@@ -556,24 +555,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
           })}
         </div>
 
-      <div className="px-4 py-5 border-t border-slate-700/60 shrink-0">
-        <div className={`flex items-center gap-3 text-[11px] font-sans text-slate-400 ${collapsed ? 'flex-col items-center' : ''}`}>
-          {!collapsed && (
-            <div>
-              <p className="font-semibold text-slate-200">Operator</p>
-              <p className="text-slate-400">Navigate modules & audit logs</p>
-            </div>
-          )}
-          <button
-            onClick={onLogout}
-            className="text-slate-400 hover:text-rose-400 transition-colors ml-auto"
-            title="Logout from Financial Reporting Portal"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+        <div className="px-4 py-5 border-t border-slate-700/60 shrink-0">
+          <div className={`flex items-center gap-3 text-[11px] font-sans text-slate-400 ${collapsed ? 'flex-col items-center' : ''}`}>
+            {!collapsed && (
+              <div>
+                <p className="font-semibold text-slate-200">Operator</p>
+                <p className="text-slate-400">Navigate modules & audit logs</p>
+              </div>
+            )}
+            <button
+              onClick={onLogout}
+              className="text-slate-400 hover:text-rose-400 transition-colors ml-auto"
+              title="Logout from Financial Reporting Portal"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 };
@@ -722,23 +721,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         )}
       </div>
 
-      {/* Grid Controls (Freeze Columns, Resize simulation, Reset) */}
+      {/* Grid Controls (Reset & Row Count) */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          onClick={() => {
-            setFreezeColumn(!freezeColumn);
-            alert(`ERP Table Config: First column frozen lock toggled!`);
-          }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans border transition-all ${freezeColumn
-            ? 'bg-[#273B5E] text-white border-[#273B5E]'
-            : 'bg-white text-slate-600 border-[#D9DEE6] hover:bg-slate-50'
-            }`}
-          title="Freeze account/item key columns"
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Freeze Col</span>
-        </button>
-
         {onClearFilters && (
           <button
             onClick={onClearFilters}

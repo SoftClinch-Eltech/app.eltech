@@ -547,23 +547,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         )}
       </div>
 
-      {/* Grid Controls (Freeze Columns, Resize simulation, Reset) */}
+      {/* Grid Controls (Reset & Row Count) */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          onClick={() => {
-            setFreezeColumn(!freezeColumn);
-            alert(`ERP Table Config: First column frozen lock toggled!`);
-          }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans border transition-all ${freezeColumn
-            ? 'bg-[#273B5E] text-white border-[#273B5E]'
-            : 'bg-white text-slate-600 border-[#D9DEE6] hover:bg-slate-50'
-            }`}
-          title="Freeze account/item key columns"
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Freeze Col</span>
-        </button>
-
         {onClearFilters && (
           <button
             onClick={onClearFilters}
