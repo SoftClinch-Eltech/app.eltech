@@ -452,12 +452,12 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
 
             // Top Header Boxes matching user specification: Document No, Reference Key, Posting Date, Doc Date, Fiscal Year, Period, Currency
             const headerFields: ButtonBoxField[] = [
-              { label: 'Document No', value: header.documentno || apiFinancialData.documentno || '-', valueClass: 'text-[#963F29] font-black' },
-              { label: 'Reference Key', value: header.ref_key || '-', valueClass: 'font-semibold' },
-              { label: 'Posting Date', value: header.pstng_date || '-' },
-              { label: 'Doc Date', value: header.doc_date || '-' },
-              { label: 'Fiscal Year', value: header.fiscal_yr != null ? String(header.fiscal_yr) : '-' },
-              { label: 'Period', value: header.period != null ? String(header.period) : '-' },
+              { label: 'Document No', value: header.documentno || apiFinancialData.documentno || '', valueClass: 'text-[#963F29] font-black' },
+              { label: 'Reference Key', value: header.ref_key || '', valueClass: 'font-semibold' },
+              { label: 'Posting Date', value: header.pstng_date || '' },
+              { label: 'Doc Date', value: header.doc_date || '' },
+              { label: 'Fiscal Year', value: header.fiscal_yr != null ? String(header.fiscal_yr) : '' },
+              { label: 'Period', value: header.period != null ? String(header.period) : '' },
               { label: 'Currency', value: header.currency || 'INR', valueClass: 'text-amber-700 font-bold' },
             ];
 
@@ -522,25 +522,25 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                             filteredItems.map((item: FinancialDocumentLineItem, idx: number) => (
                               <tr key={idx} className="hover:bg-[#963F29]/5 transition-all">
                                 <td className="p-3 text-center font-mono font-bold text-[#963F29]">{item.item1 != null ? item.item1 : idx + 1}</td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity != null ? Number(item.quantity).toLocaleString() : '-'}</td>
-                                <td className="p-3 font-mono font-bold text-amber-700">{item.customer || '-'}</td>
-                                <td className="p-3 font-mono font-bold text-[#273B5E]">{item.g_l_acct2 || '-'}</td>
-                                <td className="p-3 font-mono text-slate-600">{item.assignment || '-'}</td>
-                                <td className="p-3 font-medium text-slate-800">{item.long_text || item.logtsx || item.ska1_desc || '-'}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity != null ? Number(item.quantity).toLocaleString() : ''}</td>
+                                <td className="p-3 font-mono font-bold text-amber-700">{item.customer || ''}</td>
+                                <td className="p-3 font-mono font-bold text-[#273B5E]">{item.g_l_acct2 || ''}</td>
+                                <td className="p-3 font-mono text-slate-600">{item.assignment || ''}</td>
+                                <td className="p-3 font-medium text-slate-800">{item.long_text || item.logtsx || item.ska1_desc || ''}</td>
                                 <td className="p-3 font-mono font-bold text-slate-900 text-right">
-                                  {item.amount1 != null ? Number(item.amount1).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.amount1 != null ? Number(item.amount1).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
                                 <td className="p-3 font-mono font-bold text-slate-900 text-right">
-                                  {item.amount_lc != null ? Number(item.amount_lc).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.amount_lc != null ? Number(item.amount_lc).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.d_c_indic || '-'}</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.acct_type || '-'}</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.postkey || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.cost_ctr || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.profit_ctr || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.bus_area || '-'}</td>
-                                <td className="p-3 font-bold text-slate-800">{item.material || '-'}</td>
-                                <td className="p-3 font-medium text-slate-600">{item.text1 || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.d_c_indic || ''}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.acct_type || ''}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.postkey || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.cost_ctr || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.profit_ctr || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.bus_area || ''}</td>
+                                <td className="p-3 font-bold text-slate-800">{item.material || ''}</td>
+                                <td className="p-3 font-medium text-slate-600">{item.text1 || ''}</td>
                               </tr>
                             ))
                           )}
@@ -1004,28 +1004,28 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                                 <td className="p-3 text-center font-mono font-bold text-[#963F29]">
                                   {item.line_item != null ? item.line_item : item.item_no != null ? item.item_no : idx + 1}
                                 </td>
-                                <td className="p-3 font-bold text-slate-800">{item.material || '-'}</td>
-                                <td className="p-3 font-medium text-slate-700">{item.description || item.material_desc || '-'}</td>
+                                <td className="p-3 font-bold text-slate-800">{item.material || ''}</td>
+                                <td className="p-3 font-medium text-slate-700">{item.description || item.material_desc || ''}</td>
                                 <td className="p-3 text-right font-mono font-bold text-slate-900">
-                                  {item.bill_qty != null ? Number(item.bill_qty).toLocaleString() : item.quantity != null ? Number(item.quantity).toLocaleString() : '-'}
+                                  {item.bill_qty != null ? Number(item.bill_qty).toLocaleString() : item.quantity != null ? Number(item.quantity).toLocaleString() : ''}
                                 </td>
                                 <td className="p-3 font-mono font-bold text-emerald-750 text-right">
-                                  {item.net_value != null ? Number(item.net_value).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.net_val != null ? Number(item.net_val).toLocaleString(undefined, { minimumFractionDigits: 2 }) : header.net != null ? Number(header.net).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.net_value != null ? Number(item.net_value).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.net_val != null ? Number(item.net_val).toLocaleString(undefined, { minimumFractionDigits: 2 }) : header.net != null ? Number(header.net).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
                                 <td className="p-3 font-mono font-bold text-[#963F29] text-right">
-                                  {item.tax != null ? Number(item.tax).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.tax_amount != null ? Number(item.tax_amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : header.tax != null ? Number(header.tax).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.tax != null ? Number(item.tax).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.tax_amount != null ? Number(item.tax_amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : header.tax != null ? Number(header.tax).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.profit_ctr || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.cost_ctr || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.sales_org || header.sales_org || '-'}</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.sales_off || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.dist_channel || item.distribution_channel || header.distr_chl || '-'}</td>
-                                <td className="p-3 text-center font-mono text-slate-700">{item.division || header.division || '-'}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.profit_ctr || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.cost_ctr || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.sales_org || header.sales_org || ''}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.sales_off || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.dist_channel || item.distribution_channel || header.distr_chl || ''}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.division || header.division || ''}</td>
                                 <td className="p-3 text-right font-mono font-semibold text-slate-800">
-                                  {item.rate != null ? Number(item.rate).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.rate != null ? Number(item.rate).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
                                 <td className="p-3 font-mono font-bold text-[#273B5E] text-right">
-                                  {item.gross_val != null ? Number(item.gross_val).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.gross != null ? Number(item.gross).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                  {item.gross_val != null ? Number(item.gross_val).toLocaleString(undefined, { minimumFractionDigits: 2 }) : item.gross != null ? Number(item.gross).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                                 </td>
                               </tr>
                             ))

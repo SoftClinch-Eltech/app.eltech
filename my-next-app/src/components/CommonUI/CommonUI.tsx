@@ -630,11 +630,7 @@ interface OutputHeaderButtonBoxesProps {
 }
 
 export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode, className, gridColsClass }) => {
-  const defaultGridCols = fields.length === 5 
-    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5' 
-    : fields.length === 7 
-    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7' 
-    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+  const defaultGridCols = gridColsClass || 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4';
 
   return (
     <div className={`bg-white border rounded-xl shadow-sm p-4 space-y-3 select-none ${className || 'border-[#D9DEE6]'}`}>
@@ -650,21 +646,21 @@ export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = (
           )}
         </div>
       )}
-      <div className={`grid gap-2.5 ${gridColsClass || defaultGridCols}`}>
+      <div className={`grid gap-2.5 ${defaultGridCols}`}>
         {fields.map((field, idx) => {
           const Icon = field.icon;
           return (
             <div
               key={idx}
-              className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-[#F8FAFC] transition-all hover:bg-slate-50 hover:border-slate-300 min-w-0 overflow-hidden ${field.highlight
+              className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-[#F8FAFC] transition-all hover:bg-slate-50 hover:border-slate-300 min-w-0 ${field.highlight
                 ? 'border-amber-200 bg-amber-50/40'
                 : 'border-[#D9DEE6]'
                 }`}
             >
-              <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
                   {Icon && <Icon className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                  <span className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider font-sans leading-tight truncate" title={field.label}>
+                  <span className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider font-sans leading-tight whitespace-normal break-words" title={field.label}>
                     {field.label}
                   </span>
                 </div>
@@ -676,7 +672,7 @@ export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = (
               </div>
 
               {/* Outer button box style for the value */}
-              <div className={`flex-1 min-w-0 text-center bg-white border border-[#D9DEE6] px-2 py-1.5 rounded-md shadow-sm font-mono text-xs font-bold text-slate-800 hover:shadow-md hover:border-[#273B5E] transition-all truncate select-text cursor-default ${field.valueClass || ''}`} title={String(field.value)}>
+              <div className={`shrink-0 text-center bg-white border border-[#D9DEE6] px-2.5 py-1.5 rounded-md shadow-sm font-mono text-xs font-bold text-slate-800 hover:shadow-md hover:border-[#273B5E] transition-all whitespace-normal break-words select-text cursor-default max-w-[150px] ${field.valueClass || ''}`} title={String(field.value)}>
                 {field.value}
               </div>
             </div>
