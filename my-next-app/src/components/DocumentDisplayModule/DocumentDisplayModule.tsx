@@ -38,15 +38,28 @@ export interface FinancialDocumentHeader {
 }
 
 export interface FinancialDocumentLineItem {
-  documentno: string;
-  cocode: string;
-  fiscal_yr1: number;
-  amount_lc: number;
-  material: string;
-  quantity: number;
-  customer: string;
-  profit_ctr: string;
-  cost_ctr: string;
+  item1?: number | string;
+  item_no?: number | string;
+  quantity?: number;
+  customer?: string;
+  g_l_acct2?: string;
+  assignment?: string;
+  long_text?: string;
+  logtsx?: string;
+  ska1_desc?: string;
+  amount1?: number;
+  amount_lc?: number;
+  d_c_indic?: string;
+  acct_type?: string;
+  postkey?: string;
+  cost_ctr?: string;
+  profit_ctr?: string;
+  bus_area?: string;
+  material?: string;
+  text1?: string;
+  fiscal_yr1?: number;
+  documentno?: string;
+  cocode?: string;
 }
 
 export interface FinancialDocumentResult {
@@ -399,23 +412,32 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
             const lineItems = resultItem.line_items || [];
             const customerIdVal = lineItems.find((i) => i.customer)?.customer || 'CUST-IN-401';
 
-            const filteredItems = lineItems.filter((item) => {
+            const filteredItems = lineItems.filter((item: FinancialDocumentLineItem) => {
               if (!searchTerm.trim()) return true;
               const term = searchTerm.toLowerCase();
               return (
-                (item.documentno && item.documentno.toLowerCase().includes(term)) ||
+                (item.documentno && String(item.documentno).toLowerCase().includes(term)) ||
                 (item.material && item.material.toLowerCase().includes(term)) ||
                 (item.customer && item.customer.toLowerCase().includes(term)) ||
+                (item.g_l_acct2 && item.g_l_acct2.toLowerCase().includes(term)) ||
                 (item.profit_ctr && item.profit_ctr.toLowerCase().includes(term)) ||
-                (item.cost_ctr && item.cost_ctr.toLowerCase().includes(term))
+                (item.cost_ctr && item.cost_ctr.toLowerCase().includes(term)) ||
+                (item.assignment && item.assignment.toLowerCase().includes(term)) ||
+                (item.logtsx && item.logtsx.toLowerCase().includes(term)) ||
+                (item.long_text && item.long_text.toLowerCase().includes(term)) ||
+                (item.text1 && item.text1.toLowerCase().includes(term))
               );
             });
 
-            // Top Header Boxes matching screenshot: Document Number, Company Code, Customer ID
+            // Top Header Boxes matching user specification: Document No, Reference Key, Posting Date, Doc Date, Fiscal Year, Period, Currency
             const headerFields: ButtonBoxField[] = [
-              { label: 'Document Number', value: header.documentno || apiFinancialData.documentno, valueClass: 'text-[#963F29] font-black' },
-              { label: 'Company Code', value: header.cocode || apiFinancialData.cocode, valueClass: 'font-bold' },
-              { label: 'Customer ID', value: customerIdVal, valueClass: 'text-amber-700 font-bold' },
+              { label: 'Document No', value: header.documentno || apiFinancialData.documentno || '-', valueClass: 'text-[#963F29] font-black' },
+              { label: 'Reference Key', value: header.ref_key || '-', valueClass: 'font-semibold' },
+              { label: 'Posting Date', value: header.pstng_date || '-' },
+              { label: 'Doc Date', value: header.doc_date || '-' },
+              { label: 'Fiscal Year', value: header.fiscal_yr != null ? String(header.fiscal_yr) : '-' },
+              { label: 'Period', value: header.period != null ? String(header.period) : '-' },
+              { label: 'Currency', value: header.currency || 'INR', valueClass: 'text-amber-700 font-bold' },
             ];
 
             return (
@@ -450,46 +472,54 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                       <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                         <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
                           <tr>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">DOCUMENTNO</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">COMPANY CODE</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER ID</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">DOC_DATE</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">POSTING_DATE</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">FISCAL_YR</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">REFERENCE_KEY</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">CURRENCY</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT_LC</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">MATERIAL</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[75px]">ITEM NO</th>
                             <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">QUANTITY</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT_CTR</th>
-                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST_CTR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER ID</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">G_L ACCOUNT</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">ASSIGNMENT</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">G_L ACCOUNT DESCRIPTION</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT 1</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT LC</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[80px]">DEBIT/CREDIT INDICATOR</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[85px]">ACCOUNT TYPE</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[90px]">POSTING KEY</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST CENTER</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT CENTER</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[90px]">BUSINESS AREA</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[130px]">MATERIAL</th>
+                            <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[140px]">REMARKS</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
                           {filteredItems.length === 0 ? (
                             <tr>
-                              <td colSpan={13} className="p-6 text-center text-slate-400 italic font-sans">
+                              <td colSpan={16} className="p-6 text-center text-slate-400 italic font-sans">
                                 No line items found for this accounting document.
                               </td>
                             </tr>
                           ) : (
-                            filteredItems.map((item, idx) => (
+                            filteredItems.map((item: FinancialDocumentLineItem, idx: number) => (
                               <tr key={idx} className="hover:bg-[#963F29]/5 transition-all">
-                                <td className="p-3 font-mono font-bold text-[#963F29]">{item.documentno || header.documentno}</td>
-                                <td className="p-3 font-mono text-slate-600">{item.cocode || header.cocode}</td>
-                                <td className="p-3 font-mono font-bold text-amber-700">{item.customer || customerIdVal}</td>
-                                <td className="p-3 font-mono text-slate-600">{header.doc_date || 'N/A'}</td>
-                                <td className="p-3 font-mono text-slate-600">{header.pstng_date || 'N/A'}</td>
-                                <td className="p-3 font-mono text-slate-600">{item.fiscal_yr1 || header.fiscal_yr}</td>
-                                <td className="p-3 font-mono text-slate-600">{header.ref_key || 'NONE'}</td>
-                                <td className="p-3 font-mono text-slate-600">{header.currency || 'INR'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-[#963F29]">{item.item1 != null ? item.item1 : idx + 1}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity != null ? Number(item.quantity).toLocaleString() : '-'}</td>
+                                <td className="p-3 font-mono font-bold text-amber-700">{item.customer || '-'}</td>
+                                <td className="p-3 font-mono font-bold text-[#273B5E]">{item.g_l_acct2 || '-'}</td>
+                                <td className="p-3 font-mono text-slate-600">{item.assignment || '-'}</td>
+                                <td className="p-3 font-medium text-slate-800">{item.long_text || item.logtsx || item.ska1_desc || '-'}</td>
                                 <td className="p-3 font-mono font-bold text-slate-900 text-right">
-                                  {Number(item.amount_lc).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                  {item.amount1 != null ? Number(item.amount1).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
                                 </td>
-                                <td className="p-3 font-bold text-slate-800">{item.material || 'N/A'}</td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity != null ? Number(item.quantity).toLocaleString() : '0'}</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.profit_ctr || '-'}</td>
-                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.cost_ctr || '-'}</td>
+                                <td className="p-3 font-mono font-bold text-slate-900 text-right">
+                                  {item.amount_lc != null ? Number(item.amount_lc).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                </td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.d_c_indic || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.acct_type || '-'}</td>
+                                <td className="p-3 text-center font-mono font-bold text-slate-700">{item.postkey || '-'}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.cost_ctr || '-'}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.profit_ctr || '-'}</td>
+                                <td className="p-3 text-center font-mono text-slate-700">{item.bus_area || '-'}</td>
+                                <td className="p-3 font-bold text-slate-800">{item.material || '-'}</td>
+                                <td className="p-3 font-medium text-slate-600">{item.text1 || '-'}</td>
                               </tr>
                             ))
                           )}
@@ -540,9 +570,13 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
             </div>
             {(() => {
               const fbFields: ButtonBoxField[] = [
-                { label: 'Document Number', value: selectedIndianInvoice.docNo, valueClass: 'text-[#963F29] font-black' },
-                { label: 'Company Code', value: '1900 (IN)' },
-                { label: 'Customer ID', value: 'CUST-IN-401', valueClass: 'text-amber-700 font-bold' },
+                { label: 'Document No', value: selectedIndianInvoice.docNo, valueClass: 'text-[#963F29] font-black' },
+                { label: 'Reference Key', value: billingReference || 'REF-IN-91001', valueClass: 'font-semibold' },
+                { label: 'Posting Date', value: '2026-07-12' },
+                { label: 'Doc Date', value: '2026-07-10' },
+                { label: 'Fiscal Year', value: '2026' },
+                { label: 'Period', value: '07' },
+                { label: 'Currency', value: 'INR', valueClass: 'text-amber-700 font-bold' },
               ];
               return (
                 <OutputHeaderButtonBoxes
@@ -568,46 +602,46 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                 <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">
                     <tr>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">DOCUMENTNO</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">COMPANYCODE</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">DOC_DATE</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">PSTNG_DATE</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[90px]">FISCAL_YR</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">REF_KEY</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[80px]">CURRENCY</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT_LC</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[150px]">MATERIAL</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[75px]">ITEM NO</th>
                       <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[90px]">QUANTITY</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT_CTR</th>
-                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST_CTR</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">CUSTOMER ID</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[100px]">G_L ACCOUNT</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[110px]">ASSIGNMENT</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[160px]">G_L ACCOUNT DESCRIPTION</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT 1</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-right min-w-[110px]">AMOUNT LC</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[80px]">DEBIT/CREDIT INDICATOR</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[85px]">ACCOUNT TYPE</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[90px]">POSTING KEY</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">COST CENTER</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[100px]">PROFIT CENTER</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] text-center min-w-[90px]">BUSINESS AREA</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[130px]">MATERIAL</th>
+                      <th className="p-3 font-bold text-[#273B5E] uppercase tracking-wider text-[11px] min-w-[140px]">REMARKS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-700 text-xs">
                     {filteredIndianInvoices.map((item, idx) => (
                       <tr key={idx} className={`hover:bg-[#963F29]/5 transition-all ${item.docNo === selectedIndianInvoice.docNo ? 'bg-[#963F29]/10' : ''}`}>
-                        <td className="p-3 font-mono font-bold text-[#963F29]">{item.docNo}</td>
-                        <td className="p-3 font-mono text-slate-600">1900</td>
+                        <td className="p-3 text-center font-mono font-bold text-[#963F29]">{idx + 1}</td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
                         <td className="p-3 font-mono font-bold text-amber-700">CUST-IN-401</td>
-                        <td className="p-3 font-mono text-slate-600">2026-07-10</td>
-                        <td className="p-3 font-mono text-slate-600">2026-07-12</td>
-                        <td className="p-3 font-mono text-slate-600">2026</td>
-                        <td className="p-3 font-mono text-slate-600">{billingReference || `REF-IN-9100${idx + 1}`}</td>
-                        <td className="p-3 font-mono text-slate-500">INR</td>
+                        <td className="p-3 font-mono font-bold text-[#273B5E]">0000400000</td>
+                        <td className="p-3 font-mono text-slate-600">PO-IN-98101</td>
+                        <td className="p-3 font-medium text-slate-800">Sales Revenue Account Domestic</td>
+                        <td className="p-3 font-mono font-bold text-slate-900 text-right">{(item.netValue).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         <td className="p-3 font-mono font-bold text-emerald-750 text-right">{(item.netValue + item.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-700">S</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-700">D</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-700">01</td>
+                        <td className="p-3 text-center font-mono text-slate-700">CC-IN-100</td>
+                        <td className="p-3 text-center font-mono font-bold text-slate-500">07</td>
+                        <td className="p-3 text-center font-mono text-slate-700">BA-01</td>
                         <td className="p-3 font-bold text-slate-850">
                           <span className="block text-[10px] text-slate-400 font-mono font-bold">POS_ID: 100-{idx + 1}</span>
                           {item.material}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-slate-900">{item.quantity.toLocaleString()} TN</td>
-                        <td className="p-3 text-center font-mono font-bold text-slate-500">07</td>
-                        <td className="p-3">
-                          <div className="space-y-1 font-sans text-xs">
-                            <p className="font-bold text-[#273B5E]">{item.customerName}</p>
-                            <p className="text-[10px] text-slate-500 font-mono">GSTIN: <span className="font-bold">{item.customerGstin}</span></p>
-                            <p className="text-[10px] text-slate-400">State: <span className="font-bold">{item.customerState}</span></p>
-                          </div>
-                        </td>
+                        <td className="p-3 font-medium text-slate-600">{item.customerName} - {item.customerState}</td>
                       </tr>
                     ))}
                   </tbody>

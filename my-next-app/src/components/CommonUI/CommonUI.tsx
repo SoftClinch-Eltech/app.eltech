@@ -626,9 +626,10 @@ interface OutputHeaderButtonBoxesProps {
   title?: string;
   tcode?: string;
   className?: string;
+  gridColsClass?: string;
 }
 
-export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode, className }) => {
+export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode, className, gridColsClass }) => {
   return (
     <div className={`bg-white border rounded-xl shadow-sm p-4 space-y-3 select-none ${className || 'border-[#D9DEE6]'}`}>
       {title && (
@@ -643,7 +644,7 @@ export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = (
           )}
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${gridColsClass || 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
         {fields.map((field, idx) => {
           const Icon = field.icon;
           return (
