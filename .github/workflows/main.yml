@@ -49,10 +49,10 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             set -e
-            cd /opt/sap/frontend
+            cd /opt/sap
             export IMAGE_TAG=${{ github.sha }}
-            docker compose -f docker-compose.frontend.yml pull
-            docker compose -f docker-compose.frontend.yml up -d
+            docker compose -f docker-compose-frontend.yml pull
+            docker compose -f docker-compose-frontend.yml up -d
             sleep 10
             if ! curl -f http://localhost:3002/; then
               echo "Frontend health check failed after deploy"
