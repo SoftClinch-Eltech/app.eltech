@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
 import { initialUsers } from '../../data/sapMockData';
+import { API_BASE_URL } from '../../config/api';
 import { ShieldCheck, Lock, User as UserIcon, RefreshCw, KeyRound, Building2 } from 'lucide-react';
 
 
@@ -30,7 +31,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

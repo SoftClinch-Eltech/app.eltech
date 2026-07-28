@@ -9,6 +9,7 @@ import {
   dbLFA1
 } from '../../data/sapMockData';
 import { TableToolbar, OutputHeaderButtonBoxes, ButtonBoxField } from '../CommonUI/CommonUI';
+import { API_BASE_URL } from '../../config/api';
 import {
   Receipt,
   ArrowLeft,
@@ -239,7 +240,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const baseUrl = API_BASE_URL;
 
       let url = `${baseUrl}/api/document-display/financial-document/?documentno=${encodeURIComponent(docNumber.trim())}&cocode=${encodeURIComponent(companyCode.trim())}`;
       if (fiscalYear.trim()) {
@@ -268,7 +269,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
       onNavigate('FIN_DOC_REP');
     } catch (err: any) {
       console.error('Error fetching financial document from backend API:', err);
-      setFormError('Failed to connect to backend Django API (http://localhost:8000). Please ensure Django backend server is running.');
+      setFormError(`Failed to connect to backend Django API (${API_BASE_URL}). Please ensure Django backend server is running.`);
     } finally {
       setLoadingFinDoc(false);
     }
@@ -289,7 +290,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const baseUrl = API_BASE_URL;
 
       let url = `${baseUrl}/api/document-display/invoice/?invoice_number=${encodeURIComponent(invoiceNumber.trim())}`;
       if (companyCode.trim()) {
@@ -322,7 +323,7 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
       onNavigate('INVOICE_REP');
     } catch (err: any) {
       console.error('Error fetching invoice from backend API:', err);
-      setFormError('Failed to connect to backend Django API (http://localhost:8000). Please ensure Django backend server is running.');
+      setFormError(`Failed to connect to backend Django API (${API_BASE_URL}). Please ensure Django backend server is running.`);
       setApiInvoiceData(null);
     } finally {
       setLoadingInvoice(false);
