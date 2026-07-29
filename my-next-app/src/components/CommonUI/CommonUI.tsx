@@ -354,7 +354,7 @@ const navSections = [
     items: [
       { label: 'Financial Document', screen: 'FIN_DOC_SEL' as Screen, icon: Receipt },
       { label: 'Invoice', screen: 'INVOICE_SEL' as Screen, icon: Receipt },
-      { label: 'Purchase Order (Coming Soon)', screen: 'PO_REP' as Screen, icon: Receipt },
+      { label: 'Purchase Order (Coming Soon)', screen: 'PO_REP' as Screen, icon: Receipt, disabled: true },
     ]
   },
   {
@@ -377,15 +377,16 @@ const navSections = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onNavigate, onLogout, collapsed, onToggle }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    'Navigation': true,
+    'Navigation': false,
     'Financial Statements': false,
     'Ledger Reporting': false,
-    'Document Display': false,
+    'Document Display': true,
     'User Management': false,
     'System': false,
   });
 
   const toggleSection = (title: string) => {
+    if (title !== 'Document Display') return;
     setExpandedSections(prev => ({
       ...prev,
       [title]: !prev[title]
@@ -490,7 +491,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
         <div className={`p-4 flex-1 overflow-y-auto scrollbar-thin ${collapsed ? 'space-y-4' : 'space-y-3'}`}>
           {navSections.map((section) => {
             const isOpen = expandedSections[section.title] ?? false;
-            const isSectionDisabled = section.title === 'User Management' || section.title === 'System';
+            const isSectionDisabled = section.title !== 'Document Display';
 
             return (
               <div
@@ -533,14 +534,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
                         <button
                           key={item.label}
                           type="button"
+                          disabled={item.disabled || isSectionDisabled}
                           onClick={() => {
-                            if (item.disabled) return;
+                            if (item.disabled || isSectionDisabled) return;
                             if (item.screen) {
                               onNavigate(item.screen);
                               if (window.innerWidth < 1024) onToggle(); // Auto close on mobile
                             }
                           }}
-                          className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-xs transition-all duration-150 ${item.disabled ? 'cursor-not-allowed opacity-40 blur-[1px]' : 'hover:bg-white/10 hover:translate-x-1 hover:text-white'} ${active ? 'bg-[#963F29] text-white shadow-lg shadow-[#963F29]/20' : 'text-slate-300'}`}
+                          className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-xs transition-all duration-150 ${item.disabled || isSectionDisabled ? 'cursor-not-allowed opacity-40 blur-[0.5px] pointer-events-none select-none' : 'hover:bg-white/10 hover:translate-x-1 hover:text-white'} ${active ? 'bg-[#963F29] text-white shadow-lg shadow-[#963F29]/20' : 'text-slate-300'}`}
                           title={item.disabled ? 'Coming soon in future release' : item.label}
                         >
                           <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
@@ -555,7 +557,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
           })}
         </div>
 
-        <div className="px-4 py-5 border-t border-slate-700/60 shrink-0">
+        <div className="px-4 py-5 border-t border-slate-700/60 shrink-0 opacity-40 blur-[0.5px] pointer-events-none select-none">
           <div className={`flex items-center gap-3 text-[11px] font-sans text-slate-400 ${collapsed ? 'flex-col items-center' : ''}`}>
             {!collapsed && (
               <div>
@@ -564,8 +566,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
               </div>
             )}
             <button
-              onClick={onLogout}
-              className="text-slate-400 hover:text-rose-400 transition-colors ml-auto"
+              disabled
+              className="text-slate-400 cursor-not-allowed ml-auto"
               title="Logout from Financial Reporting Portal"
             >
               <LogOut className="w-4 h-4" />

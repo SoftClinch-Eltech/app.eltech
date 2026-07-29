@@ -68,7 +68,7 @@ export default function App() {
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
   // Navigation Router state
-  const [activeScreen, setActiveScreen] = useState<Screen>('DASHBOARD');
+  const [activeScreen, setActiveScreen] = useState<Screen>('FIN_DOC_SEL');
 
   // Interactive System-wide Toast notice
   const [toast, setToast] = useState<Toast | null>(null);
@@ -139,14 +139,14 @@ export default function App() {
         path = path.slice(basePath.length);
       }
 
-      const targetScreen = SLUG_TO_SCREEN[path] || (currentUser ? 'DASHBOARD' : 'LOGIN');
+      const targetScreen = SLUG_TO_SCREEN[path] || (currentUser ? 'FIN_DOC_SEL' : 'LOGIN');
 
       if (!currentUser && targetScreen !== 'LOGIN') {
         setActiveScreen('LOGIN');
         window.history.replaceState(null, '', `${basePath}/login`);
       } else if (currentUser && targetScreen === 'LOGIN') {
-        setActiveScreen('DASHBOARD');
-        window.history.replaceState(null, '', `${basePath}/dashboard`);
+        setActiveScreen('FIN_DOC_SEL');
+        window.history.replaceState(null, '', `${basePath}/financial-document-select`);
       } else {
         setActiveScreen(targetScreen);
       }
@@ -161,10 +161,10 @@ export default function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     triggerToast(`Welcome back to Client 800, ${user.fullName}!`);
-    setActiveScreen('DASHBOARD');
+    setActiveScreen('FIN_DOC_SEL');
 
     const basePath = window.location.pathname.startsWith('/app.eltech') ? '/app.eltech' : '';
-    window.history.pushState(null, '', `${basePath}/dashboard`);
+    window.history.pushState(null, '', `${basePath}/financial-document-select`);
   };
 
   const handleLogout = () => {

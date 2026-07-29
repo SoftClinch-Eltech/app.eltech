@@ -291,7 +291,7 @@ const navSections = [
     items: [
       { label: 'Financial Document', screen: 'FIN_DOC_SEL' as Screen, icon: Receipt },
       { label: 'Invoice', screen: 'INVOICE_SEL' as Screen, icon: Receipt },
-      { label: 'Purchase Order (Coming Soon)', screen: 'PO_REP' as Screen, icon: Receipt },
+      { label: 'Purchase Order (Coming Soon)', screen: 'PO_REP' as Screen, icon: Receipt, disabled: true },
     ]
   },
   {
@@ -352,34 +352,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
       </div>
 
       <div className={`p-4 ${collapsed ? 'space-y-3' : 'space-y-6'}`}>
-        {navSections.map((section) => (
-          <div key={section.title}>
-            {!collapsed && (
-              <div className="text-[9px] uppercase tracking-[0.25em] text-slate-400 font-semibold mb-3">{section.title}</div>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.screen || null);
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => {
-                      if (item.disabled) return;
-                      if (item.screen) onNavigate(item.screen);
-                    }}
-                    className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-sm transition-colors ${item.disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-slate-100'} ${active ? 'bg-[#273B5E] text-white shadow-sm' : 'text-slate-700'}`}
-                    title={item.disabled ? 'Coming soon in future release' : item.label}
-                  >
-                    <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500'}`} />
-                    {!collapsed && <span>{item.label}</span>}
-                  </button>
-                );
-              })}
+        {navSections.map((section) => {
+          const isSectionDisabled = section.title !== 'Document Display';
+          return (
+            <div key={section.title} className={isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}>
+              {!collapsed && (
+                <div className="text-[9px] uppercase tracking-[0.25em] text-slate-400 font-semibold mb-3">{section.title}</div>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.screen || null);
+                  const disabled = item.disabled || isSectionDisabled;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => {
+                        if (disabled) return;
+                        if (item.screen) onNavigate(item.screen);
+                      }}
+                      className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-sm transition-colors ${disabled ? 'cursor-not-allowed opacity-50 blur-[0.5px]' : 'hover:bg-slate-100'} ${active ? 'bg-[#273B5E] text-white shadow-sm' : 'text-slate-700'}`}
+                      title={disabled ? 'Disabled' : item.label}
+                    >
+                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500'}`} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="px-4 py-5 border-t border-slate-200">
