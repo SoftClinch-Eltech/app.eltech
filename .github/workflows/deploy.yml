@@ -50,6 +50,8 @@ jobs:
 
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /app.eltech
         working-directory: my-next-app
 
       - name: Upload artifact
