@@ -281,8 +281,8 @@ const navSections = [
     title: 'Ledger Reporting',
     items: [
       { label: 'General Ledger', screen: 'GL_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Customer Ledger', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Vendor Ledger', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
+      { label: 'Customer Ledger (Coming Soon)', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
+      { label: 'Vendor Ledger (Coming Soon)', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
       { label: 'Stock Ledger (Coming Soon)', screen: null, icon: FileSpreadsheet, disabled: true },
     ]
   },
@@ -353,7 +353,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
 
       <div className={`p-4 ${collapsed ? 'space-y-3' : 'space-y-6'}`}>
         {navSections.map((section) => {
-          const isSectionDisabled = section.title !== 'Document Display';
+          const isSectionDisabled = section.title !== 'Document Display' && section.title !== 'Ledger Reporting';
           return (
             <div key={section.title} className={isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}>
               {!collapsed && (

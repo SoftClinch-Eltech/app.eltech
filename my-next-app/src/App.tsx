@@ -84,6 +84,8 @@ export default function App() {
   useEffect(() => {
     const savedToken = localStorage.getItem('sap_token');
     const savedUsername = localStorage.getItem('sap_username');
+    const savedScreen = localStorage.getItem('sap_active_screen') as Screen | null;
+
     if (savedToken && savedUsername) {
       const matchedUser = usersList.find(
         (u) => u.username.toLowerCase() === savedUsername.toLowerCase()
@@ -113,6 +115,10 @@ export default function App() {
         setCurrentUser(fallbackUser);
       }
     }
+
+    if (savedScreen && SCREEN_TO_SLUG[savedScreen]) {
+      setActiveScreen(savedScreen);
+    }
     setIsSessionLoaded(true);
   }, [usersList]);
 
@@ -128,7 +134,7 @@ export default function App() {
     setToast({ message, type });
   };
 
-  // Synchronize state with URL slug
+  // Synchronize state with URL slug and localStorage
   useEffect(() => {
     if (!isSessionLoaded) return;
 
@@ -139,14 +145,25 @@ export default function App() {
         path = path.slice(basePath.length);
       }
 
-      const targetScreen = SLUG_TO_SCREEN[path] || (currentUser ? 'FIN_DOC_SEL' : 'LOGIN');
+      const savedScreen = typeof window !== 'undefined' ? (localStorage.getItem('sap_active_screen') as Screen | null) : null;
+      let targetScreen: Screen = SLUG_TO_SCREEN[path];
+
+      if (!targetScreen && (path === '/' || path === '') && savedScreen && SCREEN_TO_SLUG[savedScreen]) {
+        targetScreen = savedScreen;
+      }
+
+      if (!targetScreen) {
+        targetScreen = currentUser ? (savedScreen || 'FIN_DOC_SEL') : 'LOGIN';
+      }
 
       if (!currentUser && targetScreen !== 'LOGIN') {
         setActiveScreen('LOGIN');
         window.history.replaceState(null, '', `${basePath}/login`);
       } else if (currentUser && targetScreen === 'LOGIN') {
-        setActiveScreen('FIN_DOC_SEL');
-        window.history.replaceState(null, '', `${basePath}/financial-document-select`);
+        const defaultScreen = savedScreen || 'FIN_DOC_SEL';
+        const defaultSlug = SCREEN_TO_SLUG[defaultScreen] || '/financial-document-select';
+        setActiveScreen(defaultScreen);
+        window.history.replaceState(null, '', `${basePath}${defaultSlug}`);
       } else {
         setActiveScreen(targetScreen);
       }
@@ -161,10 +178,12 @@ export default function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     triggerToast(`Welcome back to Client 800, ${user.fullName}!`);
-    setActiveScreen('FIN_DOC_SEL');
+    const target = (localStorage.getItem('sap_active_screen') as Screen) || 'GL_LEDGER_SEL';
+    setActiveScreen(target);
 
     const basePath = window.location.pathname.startsWith('/app.eltech') ? '/app.eltech' : '';
-    window.history.pushState(null, '', `${basePath}/financial-document-select`);
+    const slug = SCREEN_TO_SLUG[target] || '/gl-ledger-select';
+    window.history.pushState(null, '', `${basePath}${slug}`);
   };
 
   const handleLogout = () => {
@@ -173,6 +192,7 @@ export default function App() {
     }
     localStorage.removeItem('sap_token');
     localStorage.removeItem('sap_username');
+    localStorage.removeItem('sap_active_screen');
     setCurrentUser(null);
     setActiveScreen('LOGIN');
 
@@ -202,6 +222,9 @@ export default function App() {
     }
 
     setActiveScreen(screen);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sap_active_screen', screen);
+    }
 
     const slug = SCREEN_TO_SLUG[screen] || '/login';
     const basePath = window.location.pathname.startsWith('/app.eltech') ? '/app.eltech' : '';

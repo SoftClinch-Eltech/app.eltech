@@ -344,8 +344,8 @@ const navSections = [
     title: 'Ledger Reporting',
     items: [
       { label: 'General Ledger', screen: 'GL_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Customer Ledger', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Vendor Ledger', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
+      { label: 'Customer Ledger (Coming Soon)', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
+      { label: 'Vendor Ledger (Coming Soon)', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
       { label: 'Stock Ledger (Coming Soon)', screen: null, icon: FileSpreadsheet, disabled: true },
     ]
   },
@@ -377,16 +377,28 @@ const navSections = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onNavigate, onLogout, collapsed, onToggle }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    'Navigation': false,
+    'Navigation': true,
     'Financial Statements': false,
-    'Ledger Reporting': false,
+    'Ledger Reporting': true,
     'Document Display': true,
     'User Management': false,
     'System': false,
   });
 
+  useEffect(() => {
+    if (
+      activeScreen.startsWith('GL_LEDGER') ||
+      activeScreen.startsWith('CUSTOMER_LEDGER') ||
+      activeScreen.startsWith('VENDOR_LEDGER') ||
+      activeScreen.startsWith('STOCK') ||
+      activeScreen.startsWith('LEDGER_REP')
+    ) {
+      setExpandedSections(prev => ({ ...prev, 'Ledger Reporting': true }));
+    }
+  }, [activeScreen]);
+
   const toggleSection = (title: string) => {
-    if (title !== 'Document Display') return;
+    if (title !== 'Document Display' && title !== 'Ledger Reporting') return;
     setExpandedSections(prev => ({
       ...prev,
       [title]: !prev[title]
@@ -491,7 +503,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
         <div className={`p-4 flex-1 overflow-y-auto scrollbar-thin ${collapsed ? 'space-y-4' : 'space-y-3'}`}>
           {navSections.map((section) => {
             const isOpen = expandedSections[section.title] ?? false;
-            const isSectionDisabled = section.title !== 'Document Display';
+            const isSectionDisabled = section.title !== 'Document Display' && section.title !== 'Ledger Reporting';
 
             return (
               <div

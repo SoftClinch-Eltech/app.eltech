@@ -8,6 +8,8 @@ import {
   dbLFA1,
   dbVBRP
 } from '../../data/sapMockData';
+import { sampleGeneralLedgerData, GeneralLedgerItem } from '../../data/generalLedgerData';
+import { API_BASE_URL } from '../../config/api';
 import { TableToolbar, OutputHeaderButtonBoxes, ButtonBoxField } from '../CommonUI/CommonUI';
 import {
   BookOpen,
@@ -21,7 +23,11 @@ import {
   Search,
   Package,
   Calendar,
-  DollarSign
+  DollarSign,
+  Info,
+  AlertCircle,
+  Loader2,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface LedgerReportingModuleProps {
@@ -38,12 +44,19 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // ============================================================================
   // LEDGER FORM STATE VARIABLES
   // ============================================================================
-  // SHARED FORM STATE VARIABLES
-  // ============================================================================
-  const [companyCode, setCompanyCode] = useState('1900');
+  const [companyCode, setCompanyCode] = useState('6000');
   const [glAccount, setGlAccount] = useState('100010');
   const [fiscalYear, setFiscalYear] = useState('2026');
   const [postingDate, setPostingDate] = useState('2026-07-01');
+
+  // General Ledger Form Specific States
+  const [fromGlAccount, setFromGlAccount] = useState('');
+  const [toGlAccount, setToGlAccount] = useState('');
+  const [fromDate, setFromDate] = useState('2024-04-01');
+  const [toDate, setToDate] = useState('2024-04-30');
+  const [glOption, setGlOption] = useState<'all_entries' | 'open_items' | 'cleared_items'>('all_entries');
+  const [apiGlData, setApiGlData] = useState<GeneralLedgerItem[]>(sampleGeneralLedgerData);
+  const [loadingGl, setLoadingGl] = useState(false);
 
   const [customerCode, setCustomerCode] = useState('0000100201');
   const [vendorCode, setVendorCode] = useState('0000200501');
@@ -60,14 +73,117 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // Table search text
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ============================================================================
-  // DERIVED MOCK DATA SELECTIONS
-  // ============================================================================
+  // Handler for Fetching General Ledger API / Local Data
+  const handleFetchGeneralLedger = async () => {
+    if (!companyCode.trim()) {
+      triggerToast('Company Code is mandatory.', 'warning');
+      return;
+    }
+    if (!toDate.trim()) {
+      triggerToast('To Date is mandatory.', 'warning');
+      return;
+    }
+    if (glOption !== 'open_items' && !fromDate.trim()) {
+      triggerToast('From Date is mandatory for all/cleared entries selection.', 'warning');
+      return;
+    }
 
-  // General Ledger Entries
-  const glReportEntries = useMemo(() => {
-    return glEntriesDb[glAccount] || [];
-  }, [glEntriesDb, glAccount]);
+    setLoadingGl(true);
+
+    try {
+      const baseUrl = API_BASE_URL;
+      let url = `${baseUrl}/api/ledger-reporting/general-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(glOption)}`;
+      if (fromGlAccount.trim()) url += `&from_gl_acc_num=${encodeURIComponent(fromGlAccount.trim())}`;
+      if (toGlAccount.trim()) url += `&to_gl_acc_num=${encodeURIComponent(toGlAccount.trim())}`;
+      if (glOption !== 'open_items' && fromDate.trim()) url += `&from_date=${encodeURIComponent(fromDate.trim())}`;
+      if (toDate.trim()) url += `&to_date=${encodeURIComponent(toDate.trim())}`;
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Token ${token}`;
+
+      const res = await fetch(url, { method: 'GET', headers });
+      if (res.ok) {
+        const json = await res.json();
+        let items: GeneralLedgerItem[] = [];
+        if (json.data && Array.isArray(json.data.data)) {
+          items = json.data.data;
+        } else if (json.data && Array.isArray(json.data)) {
+          items = json.data;
+        } else if (Array.isArray(json)) {
+          items = json;
+        }
+        setApiGlData(items);
+        triggerToast(`General Ledger data fetched successfully (${items.length} records).`, 'success');
+      } else {
+        throw new Error(`API returned HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('Backend API connection fallback to local filtering:', err);
+
+      // Perform fallback local shortlist filter matching user input parameters
+      let filtered = sampleGeneralLedgerData.filter((item) => {
+        // 1. Mandatory Company Code filter
+        if (companyCode.trim() && item.cocode !== companyCode.trim()) return false;
+
+        // 2. Optional GL Account range filter
+        if (fromGlAccount.trim() && item.g_l_acct2 < fromGlAccount.trim()) return false;
+        if (toGlAccount.trim() && item.g_l_acct2 > toGlAccount.trim()) return false;
+
+        // 3. Status selection option filter (all_entries, open_items, cleared_items)
+        if (glOption === 'open_items') {
+          // Open items: clgentdate must be null or empty string
+          if (item.clgentdate) return false;
+          if (toDate.trim() && item.posting_date > toDate.trim()) return false;
+        } else if (glOption === 'cleared_items') {
+          // Cleared items: clgentdate must exist
+          if (!item.clgentdate) return false;
+          if (fromDate.trim() && item.posting_date < fromDate.trim()) return false;
+          if (toDate.trim() && item.posting_date > toDate.trim()) return false;
+        } else {
+          // All entries
+          if (fromDate.trim() && item.posting_date < fromDate.trim()) return false;
+          if (toDate.trim() && item.posting_date > toDate.trim()) return false;
+        }
+
+        return true;
+      });
+
+      setApiGlData(filtered);
+      triggerToast(`Loaded shortlisted General Ledger data (${filtered.length} entries).`, 'info');
+    } finally {
+      setLoadingGl(false);
+      onNavigate('GL_LEDGER_REP');
+    }
+  };
+
+  // Grouping of API / Filtered General Ledger entries by G/L account for output table
+  const groupedGLData = useMemo(() => {
+    const map: Record<string, GeneralLedgerItem[]> = {};
+    apiGlData.forEach((item) => {
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        const match =
+          item.documentno.toLowerCase().includes(term) ||
+          item.g_l_acct2.toLowerCase().includes(term) ||
+          (item.assignment && item.assignment.toLowerCase().includes(term)) ||
+          (item.vendor && item.vendor.toLowerCase().includes(term)) ||
+          (item.customer && item.customer.toLowerCase().includes(term)) ||
+          (item.reference_key && item.reference_key.toLowerCase().includes(term));
+        if (!match) return;
+      }
+
+      const acct = item.g_l_acct2 || 'General Account';
+      if (!map[acct]) map[acct] = [];
+      map[acct].push(item);
+    });
+    return map;
+  }, [apiGlData, searchTerm]);
+
+  // Overall grand total amount calculation
+  const grandTotalAmount = useMemo(() => {
+    return apiGlData.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
+  }, [apiGlData]);
 
   // Customer Master & Ledger
   const activeCustomer = useMemo(() => {
@@ -87,7 +203,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     return vendorEntriesDb[vendorCode] || [];
   }, [vendorEntriesDb, vendorCode]);
 
-  // Stock Material lists (Calculated dynamically from VBRP table entries to make it 100% connected!)
+  // Stock Material lists
   const stockItems = useMemo(() => {
     return [
       { matCode: 'MAT-FIBER-01', name: 'High Tensile Carbon Fiber Sheet', stockQty: 480, plant: 'PL-10', storageLoc: 'SL-01', uom: 'PC', val: 192000 },
@@ -97,12 +213,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     ];
   }, []);
 
-  // Filtered lists for simple lookup
-  const filteredGLList = glReportEntries.filter(entry =>
-    entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    entry.documentNum.includes(searchTerm)
-  );
-
+  // Filtered lists for customer & vendor lookup
   const filteredCustomerList = customerReportEntries.filter(entry =>
     entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     entry.documentNum.includes(searchTerm)
@@ -158,7 +269,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                   <div className="p-2 bg-slate-50 text-[#273B5E] rounded-lg">
                     <BookOpen className="w-5 h-5 text-[#963F29]" />
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono font-bold">T-Code: {tile.code}</span>
+                 
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-[#273B5E] group-hover:text-[#963F29] transition-colors">{tile.name}</h3>
@@ -181,77 +292,213 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // ----------------------------------------------------------------------------
   if (activeScreen === 'GL_LEDGER_SEL') {
     return (
-      <div className="p-6 max-w-xl mx-auto select-none">
-        <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
-          <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-amber-500" />
-            <div>
-              <h3 className="font-bold text-xs">G/L LINE ITEM SELECTION</h3>
-              <p className="text-[10px] text-gray-300">Transaction FBL3N - General Ledger</p>
+      <div className="p-3 sm:p-6 max-w-2xl mx-auto select-none">
+        <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-[#273B5E] text-white p-3.5 sm:p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Filter className="w-5 h-5 text-amber-500 shrink-0" />
+              <div>
+                <h3 className="font-bold text-xs sm:text-sm tracking-tight uppercase">General Ledger Selection</h3>
+              </div>
             </div>
           </div>
 
-          <div className="p-5 space-y-4 text-xs font-sans">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Target G/L Account</label>
-              <select
-                id="gl-sel-account"
-                value={glAccount}
-                onChange={(e) => setGlAccount(e.target.value)}
-                className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
-              >
-                <option value="100010">100010 - Petty Cash Local Account</option>
-                <option value="140000">140000 - Accounts Receivable General</option>
-                <option value="210000">210000 - Accounts Payable General</option>
-              </select>
+          <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 text-xs font-sans">
+            {/* Optional Fields Section */}
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-3.5 sm:p-4 space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <span className="text-[11px] font-extrabold text-[#273B5E] uppercase tracking-wider">Optional Fields</span>
+                <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono">Range Filter</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">From GL Account Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10502004"
+                    value={fromGlAccount}
+                    onChange={(e) => setFromGlAccount(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">To GL Account Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10502010"
+                    value={toGlAccount}
+                    onChange={(e) => setToGlAccount(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Company Code</label>
-              <input
-                type="text"
-                value={companyCode}
-                onChange={(e) => setCompanyCode(e.target.value)}
-                className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-bold"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            {/* Mandatory Fields Section */}
+            <div className="bg-amber-50/30 border border-amber-200/80 rounded-lg p-3.5 sm:p-4 space-y-3">
+              <div className="flex items-center gap-2 border-b border-amber-200/60 pb-2">
+                <span className="text-[11px] font-extrabold text-[#963F29] uppercase tracking-wider">Mandatory Fields</span>
+                <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-mono font-bold">Required</span>
+              </div>
+              
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fiscal Year</label>
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                  Company Code <span className="text-rose-600 font-bold">*</span>
+                </label>
                 <input
                   type="text"
-                  value={fiscalYear}
-                  onChange={(e) => setFiscalYear(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
+                  placeholder="e.g. 6000"
+                  value={companyCode}
+                  onChange={(e) => setCompanyCode(e.target.value)}
+                  className="w-full bg-white border border-[#D9DEE6] rounded p-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                  required
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">From Posting Date</label>
-                <input
-                  type="date"
-                  value={postingDate}
-                  onChange={(e) => setPostingDate(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                      From Date {glOption !== 'open_items' && <span className="text-rose-600 font-bold">*</span>}
+                    </label>
+                    {glOption === 'open_items' && (
+                      <span className="text-[9px] text-amber-700 font-bold font-mono">Disabled</span>
+                    )}
+                  </div>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    disabled={glOption === 'open_items'}
+                    className={`w-full border rounded p-2 text-xs font-mono transition-all ${
+                      glOption === 'open_items'
+                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                        : 'bg-white border-[#D9DEE6] text-slate-800 focus:outline-none focus:border-[#273B5E]'
+                    }`}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                    To Date <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded p-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Special Note when Open Items is selected */}
+              {glOption === 'open_items' && (
+                <div className="bg-amber-100/70 border border-amber-300 text-amber-900 rounded-lg p-3 text-xs flex items-start gap-2.5 animate-fade-in mt-2">
+                  <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="leading-snug text-[11px] sm:text-xs">
+                    <span className="font-bold block text-amber-950">Note on Open Items Selection:</span>
+                    When <strong>Open Items</strong> is selected, <strong>From Date</strong> is disabled as open items reporting includes all uncleared postings up to the key <strong>To Date</strong>.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Selection Options (Restrict only one selection) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Selection Type (Restrict to one selection)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                <label
+                  onClick={() => setGlOption('all_entries')}
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    glOption === 'all_entries'
+                      ? 'border-[#273B5E] bg-[#273B5E]/5 text-[#273B5E] font-bold shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="gl_option"
+                    value="all_entries"
+                    checked={glOption === 'all_entries'}
+                    onChange={() => setGlOption('all_entries')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">All entries</span>
+                  <span className="text-[9px] text-slate-400 font-mono sm:mt-0.5">(all_entries)</span>
+                </label>
+
+                <label
+                  onClick={() => setGlOption('open_items')}
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    glOption === 'open_items'
+                      ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="gl_option"
+                    value="open_items"
+                    checked={glOption === 'open_items'}
+                    onChange={() => setGlOption('open_items')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">Open Items</span>
+                  <span className="text-[9px] text-slate-400 font-mono sm:mt-0.5">(open_items)</span>
+                </label>
+
+                <label
+                  onClick={() => setGlOption('cleared_items')}
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    glOption === 'cleared_items'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="gl_option"
+                    value="cleared_items"
+                    checked={glOption === 'cleared_items'}
+                    onChange={() => setGlOption('cleared_items')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">Cleared Items</span>
+                  <span className="text-[9px] text-slate-400 font-mono sm:mt-0.5">(cleared_items)</span>
+                </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-100 pt-4 gap-3">
+            {/* Action Buttons */}
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-between border-t border-slate-200 pt-4 gap-3">
               <button
                 id="btn-gl-back"
                 onClick={() => onNavigate('LEDGER_REP_MAIN')}
-                className="px-4 py-2 border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 font-medium"
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-[#D9DEE6] rounded-lg text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors text-center"
               >
                 Back
               </button>
               <button
                 id="btn-gl-display"
-                onClick={() => onNavigate('GL_LEDGER_REP')}
-                className="px-5 py-2 bg-[#273B5E] hover:bg-[#3d5680] text-white rounded text-xs font-semibold flex items-center gap-1"
+                disabled={loadingGl}
+                onClick={handleFetchGeneralLedger}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#273B5E] hover:bg-[#1f2f4b] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
               >
-                <span>Display G/L Postings</span>
+                {loadingGl ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Fetching Data...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Display G/L Postings</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -264,165 +511,175 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // GENERAL LEDGER - OUTPUT REPORT (FBL3N)
   // ----------------------------------------------------------------------------
   if (activeScreen === 'GL_LEDGER_REP') {
+    const accountKeys = Object.keys(groupedGLData);
+
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto select-none">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto select-none font-sans">
+        {/* Top Header toolbar */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4">
           <div>
-            <h2 className="text-lg font-sans font-bold text-[#273B5E]">G/L Line Item Report (FBL3N)</h2>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">
-              Company Code: {companyCode} | Account: {glAccount} | Fiscal Year: {fiscalYear}
+            <h2 className="text-base sm:text-lg font-sans font-bold text-[#273B5E]">G/L Account Line Item Display</h2>
+            <p className="text-[11px] sm:text-xs text-slate-500 font-mono mt-0.5">
+              Company Code: <strong>{companyCode}</strong> | Option: <strong>{glOption}</strong> | Total Records: <strong>{apiGlData.length}</strong>
             </p>
           </div>
           <button
             id="btn-gl-rep-back"
             onClick={() => onNavigate('GL_LEDGER_SEL')}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Selection Screen</span>
           </button>
         </div>
 
-        {/* Unified Button Box Metadata Grid */}
-        {(() => {
-          const glFields: ButtonBoxField[] = [
-            { label: 'G/L Account', value: glAccount, highlight: true, valueClass: 'text-[#963F29]' },
-            { label: 'Account Description', value: glAccount === '100010' ? 'Petty Cash Local Account' : glAccount === '140000' ? 'Accounts Receivable' : 'Accounts Payable' },
-            { label: 'Company Code', value: companyCode },
-            { label: 'Fiscal Year', value: fiscalYear },
-            { label: 'Ledger Book', value: '0L (Leading)' },
-            { label: 'Total Postings', value: `${filteredGLList.length} Rows`, valueClass: 'text-[#273B5E]' },
-            { label: 'From Posting Date', value: postingDate },
-            { label: 'Currency', value: 'INR', valueClass: 'text-emerald-600' },
-            { label: 'SAP Client', value: '800', badge: 'SYS: S4P' }
-          ];
-          return (
-            <OutputHeaderButtonBoxes
-              fields={glFields}
-              title="LEDGER SUMMARY DATA MATRIX"
-              tcode="FBL3N"
-            />
-          );
-        })()}
+        {/* Global Toolbar Search */}
+        <TableToolbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          totalRecords={apiGlData.length}
+        />
 
-        {/* SAP G/L Posting Data Entry Block (exactly 2 inputs with button) */}
-        <div className="bg-[#273B5E]/5 border-2 border-[#273B5E]/30 border-l-8 border-l-[#273B5E] rounded-xl p-6 flex flex-col md:flex-row items-end gap-5 shadow-sm transition-all hover:shadow-md">
-          <div className="flex-grow space-y-3 w-full md:w-auto">
-            <div className="flex items-center gap-2">
-              <span className="bg-[#273B5E] text-white px-2.5 py-1 rounded text-xs font-mono tracking-wider font-extrabold uppercase">SAP Table BKPF</span>
-              <span className="text-xs uppercase font-black text-[#273B5E] font-mono tracking-wide">G/L Entry Fast Posting Block</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-black text-slate-800 tracking-wide block uppercase">1. Enter Document Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 100000210"
-                  value={fastDocNum}
-                  onChange={(e) => setFastDocNum(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-3 text-sm sm:text-base md:text-lg font-mono font-black text-[#273B5E] focus:outline-none focus:border-[#273B5E] focus:ring-4 focus:ring-[#273B5E]/10 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-black text-slate-800 tracking-wide block uppercase">2. Enter Posting Text / Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Petty Cash replenishment"
-                  value={fastDesc}
-                  onChange={(e) => setFastDesc(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-3 text-sm sm:text-base md:text-lg font-black text-[#273B5E] focus:outline-none focus:border-[#273B5E] focus:ring-4 focus:ring-[#273B5E]/10 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
-              </div>
-            </div>
+        {/* Display Grouped Tables per G/L Account (matching SAP GUI FBL3N layout) */}
+        {accountKeys.length === 0 ? (
+          <div className="bg-white rounded-lg border border-[#D9DEE6] p-8 text-center text-slate-400">
+            No matching General Ledger records found for Company Code {companyCode}.
           </div>
-          <button
-            onClick={() => {
-              if (!fastDocNum.trim() || !fastDesc.trim()) {
-                triggerToast('Please fill in both inputs: Document Number and Description.');
-                return;
-              }
-              const currentEntries = glEntriesDb[glAccount] || [];
-              if (currentEntries.some(e => e.documentNum === fastDocNum.trim())) {
-                triggerToast(`Document ${fastDocNum} already exists for this G/L account!`, 'warning');
-                return;
-              }
-              const lastBalance = currentEntries.length > 0 ? currentEntries[currentEntries.length - 1].balance : 0;
-              const newEntry: LedgerEntry = {
-                postingDate: new Date().toISOString().split('T')[0],
-                documentNum: fastDocNum.trim(),
-                reference: 'FAST-ENT',
-                description: fastDesc.trim(),
-                debit: 1000,
-                credit: 0,
-                balance: lastBalance + 1000
-              };
-              setGlEntriesDb(prev => ({
-                ...prev,
-                [glAccount]: [...currentEntries, newEntry]
-              }));
-              setFastDocNum('');
-              setFastDesc('');
-              triggerToast(`Successfully posted custom G/L journal line item document ${newEntry.documentNum}.`);
-            }}
-            className="w-full md:w-auto px-8 py-4 bg-[#273B5E] hover:bg-[#1a283f] text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 shadow-md hover:translate-y-[-1px] active:translate-y-[0px]"
-          >
-            <span>+ Post Journal Item</span>
-          </button>
-        </div>
+        ) : (
+          accountKeys.map((acctKey) => {
+            const items = groupedGLData[acctKey];
+            const acctSubtotal = items.reduce((acc, i) => acc + (i.amount_lc || 0), 0);
 
-        {/* GL Ledger table */}
-        <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
-          <TableToolbar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            totalRecords={filteredGLList.length}
-          />
+            return (
+              <div key={acctKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
+                {/* SAP G/L Account Header Banner */}
+                <div className="bg-[#273B5E] text-white px-4 py-2.5 flex items-center justify-between font-mono text-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[11px]">
+                      G/L Account: {acctKey}
+                    </span>
+                    <span className="text-slate-300 font-sans">
+                      Company Code: <strong>{companyCode}</strong>
+                    </span>
+                  </div>
+                  <span className="text-[#fef08a] font-bold">
+                    Subtotal: ₹{acctSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700">
-                <tr>
-                  <th className="p-3">Posting Date</th>
-                  <th className="p-3 font-mono">Doc Number</th>
-                  <th className="p-3 font-mono">Reference</th>
-                  <th className="p-3 font-mono text-center">CoCode</th>
-                  <th className="p-3 font-mono text-center">Year</th>
-                  <th className="p-3">Line Description</th>
-                  <th className="p-3 text-right font-mono">Debit Amount</th>
-                  <th className="p-3 text-right font-mono">Credit Amount</th>
-                  <th className="p-3 text-right font-mono">Running Balance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredGLList.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="p-8 text-center text-slate-400 font-medium">
-                      No matching SAP entries found for G/L Account {glAccount}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredGLList.map((entry, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="p-3 font-medium">{entry.postingDate}</td>
-                      <td className="p-3 font-mono font-bold text-[#963F29]">{entry.documentNum}</td>
-                      <td className="p-3 font-mono">{entry.reference}</td>
-                      <td className="p-3 font-mono text-center text-slate-500 font-medium">{companyCode}</td>
-                      <td className="p-3 font-mono text-center text-slate-500 font-medium">{fiscalYear}</td>
-                      <td className="p-3">{entry.description}</td>
-                      <td className="p-3 text-right text-emerald-600 font-mono font-semibold">
-                        {entry.debit > 0 ? `₹${(entry.debit * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
-                      </td>
-                      <td className="p-3 text-right text-rose-600 font-mono font-semibold">
-                        {entry.credit > 0 ? `₹${(entry.credit * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
-                      </td>
-                      <td className="p-3 text-right font-mono font-bold text-slate-900">
-                        ₹{(entry.balance * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap font-sans">
+                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold sticky top-0">
+                      <tr>
+                        <th className="p-2.5 text-center min-w-[50px]">St</th>
+                        <th className="p-2.5 font-mono min-w-[110px]">DocumentNo</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">G/L Acct</th>
+                        <th className="p-2.5 font-mono text-center min-w-[70px]">CoCode</th>
+                        <th className="p-2.5 font-mono min-w-[110px]">Assignment</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">Posting Date</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">Clearing Date</th>
+                        <th className="p-2.5 font-mono text-center min-w-[50px]">PostKey</th>
+                        <th className="p-2.5 font-mono text-center min-w-[50px]">D/C</th>
+                        <th className="p-2.5 text-right font-mono min-w-[130px]">Amount (LC)</th>
+                        <th className="p-2.5 text-right font-mono min-w-[120px]">Amount 1</th>
+                        <th className="p-2.5 font-mono min-w-[160px]">Reference Key</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">Customer</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">Vendor</th>
+                        <th className="p-2.5 font-mono min-w-[100px]">Material</th>
+                        <th className="p-2.5 font-mono min-w-[90px]">Profit Ctr</th>
+                        <th className="p-2.5 font-mono min-w-[90px]">Cost Ctr</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {items.map((item, idx) => {
+                        const isCleared = Boolean(item.clgentdate);
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                            {/* 1. St (Status Indicator Dot based on clearing date) */}
+                            <td className="p-2.5 text-center">
+                              {isCleared ? (
+                                <span className="inline-block w-3 h-3 rounded-full bg-emerald-500 shadow-sm" title={`Cleared on ${item.clgentdate}`} />
+                              ) : (
+                                <span className="inline-block w-3 h-3 rounded-sm bg-rose-500 shadow-sm" title="Open Item" />
+                              )}
+                            </td>
+                            {/* 2. DocumentNo */}
+                            <td className="p-2.5 font-mono font-bold text-[#963F29]">{item.documentno}</td>
+                            {/* 3. G/L Account */}
+                            <td className="p-2.5 font-mono text-slate-700 font-bold">{item.g_l_acct2}</td>
+                            {/* 4. Company Code */}
+                            <td className="p-2.5 font-mono text-center text-slate-600">{item.cocode}</td>
+                            {/* 5. Assignment */}
+                            <td className="p-2.5 font-mono text-slate-600">{item.assignment || '-'}</td>
+                            {/* 6. Posting Date */}
+                            <td className="p-2.5 font-mono text-slate-700">{item.posting_date || '-'}</td>
+                            {/* 7. Clearing Date */}
+                            <td className="p-2.5 font-mono text-slate-600">
+                              {isCleared ? item.clgentdate : <span className="text-amber-700 font-bold text-[10px]">Open Item</span>}
+                            </td>
+                            {/* 8. PK (Posting Key) */}
+                            <td className="p-2.5 text-center font-mono text-slate-600">{item.postkey || '-'}</td>
+                            {/* 9. D/C (Debit / Credit) */}
+                            <td className="p-2.5 text-center font-mono font-semibold">{item.d_c_indic || '-'}</td>
+                            {/* 10. Amount LC */}
+                            <td className={`p-2.5 text-right font-mono font-bold ${item.d_c_indic === 'S' ? 'text-emerald-700' : 'text-slate-900'}`}>
+                              ₹{(item.amount_lc || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            {/* 11. Amount 1 */}
+                            <td className="p-2.5 text-right font-mono text-slate-700">
+                              {item.amount1 !== undefined && item.amount1 !== null
+                                ? `₹${item.amount1.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                : '-'}
+                            </td>
+                            {/* 12. Reference Key */}
+                            <td className="p-2.5 font-mono text-slate-600 truncate max-w-[160px]" title={item.reference_key || ''}>
+                              {item.reference_key || '-'}
+                            </td>
+                            {/* 13. Customer */}
+                            <td className="p-2.5 font-mono text-slate-700">{item.customer || '-'}</td>
+                            {/* 14. Vendor */}
+                            <td className="p-2.5 font-mono text-slate-700">{item.vendor || '-'}</td>
+                            {/* 15. Material */}
+                            <td className="p-2.5 font-mono text-slate-700">{item.material || '-'}</td>
+                            {/* 16. Profit Center */}
+                            <td className="p-2.5 font-mono text-center text-slate-500">{item.profit_ctr || '-'}</td>
+                            {/* 17. Cost Center */}
+                            <td className="p-2.5 font-mono text-center text-slate-500">{item.cost_ctr || '-'}</td>
+                          </tr>
+                        );
+                      })}
+                      {/* SAP Subtotal row for each G/L account */}
+                      <tr className="bg-[#fef9c3] font-mono font-bold text-slate-900 border-t-2 border-slate-300">
+                        <td colSpan={9} className="p-2.5 text-right text-slate-800">
+                          * Account {acctKey} Total:
+                        </td>
+                        <td className="p-2.5 text-right text-slate-900 text-sm font-black">
+                          ₹{acctSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-2.5 text-right text-slate-900 text-sm font-black">
+                          ₹{items.reduce((acc, i) => acc + (i.amount1 || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td colSpan={6} />
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {/* Grand Total Footer Box */}
+        <div className="bg-[#273B5E] text-white p-4 rounded-lg shadow-md flex items-center justify-between font-mono text-xs">
+          <div>
+            <span className="font-sans text-slate-300 block">TOTAL GRAND ACCUMULATED BALANCE</span>
+            <span className="text-amber-400 font-bold">Shortlisted Result Count: {apiGlData.length} records</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] text-slate-400 block font-sans uppercase">Currency INR</span>
+            <span className="text-lg font-black text-emerald-400">
+              ₹{grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </span>
           </div>
         </div>
       </div>
