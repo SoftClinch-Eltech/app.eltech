@@ -176,6 +176,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
         const match =
           item.documentno.toLowerCase().includes(term) ||
           item.g_l_acct2.toLowerCase().includes(term) ||
+          (item.gl_description && item.gl_description.toLowerCase().includes(term)) ||
           (item.assignment && item.assignment.toLowerCase().includes(term)) ||
           (item.vendor && item.vendor.toLowerCase().includes(term)) ||
           (item.customer && item.customer.toLowerCase().includes(term)) ||
@@ -684,8 +685,8 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                 {/* SAP G/L Account Header Banner */}
                 <div className="bg-[#273B5E] text-white px-4 py-2.5 flex items-center justify-between font-mono text-xs">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[11px]">
-                      G/L Account: {acctKey}
+                    <span className="font-bold bg-[#963F29] px-2.5 py-1 rounded text-[11px]">
+                      G/L Account: {acctKey} {items[0]?.gl_description ? `— ${items[0].gl_description}` : ''}
                     </span>
                     <span className="text-slate-300 font-sans">
                       Company Code: <strong>{companyCode}</strong>
@@ -703,6 +704,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                         <th className="p-2.5 text-center min-w-[50px]">St</th>
                         <th className="p-2.5 font-mono min-w-[110px]">DocumentNo</th>
                         <th className="p-2.5 font-mono min-w-[100px]">G/L Acct</th>
+                        <th className="p-2.5 font-mono min-w-[180px]">GL Description</th>
                         <th className="p-2.5 font-mono text-center min-w-[70px]">CoCode</th>
                         <th className="p-2.5 font-mono min-w-[110px]">Assignment</th>
                         <th className="p-2.5 font-mono min-w-[100px]">Posting Date</th>
@@ -736,50 +738,52 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                             <td className="p-2.5 font-mono font-bold text-[#963F29]">{item.documentno}</td>
                             {/* 3. G/L Account */}
                             <td className="p-2.5 font-mono text-slate-700 font-bold">{item.g_l_acct2}</td>
-                            {/* 4. Company Code */}
+                            {/* 4. GL Description */}
+                            <td className="p-2.5 font-sans font-medium text-slate-800">{item.gl_description || '-'}</td>
+                            {/* 5. Company Code */}
                             <td className="p-2.5 font-mono text-center text-slate-600">{item.cocode}</td>
-                            {/* 5. Assignment */}
+                            {/* 6. Assignment */}
                             <td className="p-2.5 font-mono text-slate-600">{item.assignment || ''}</td>
-                            {/* 6. Posting Date */}
+                            {/* 7. Posting Date */}
                             <td className="p-2.5 font-mono text-slate-700">{item.posting_date || ''}</td>
-                            {/* 7. Clearing Date */}
+                            {/* 8. Clearing Date */}
                             <td className="p-2.5 font-mono text-slate-600">
                               {isCleared ? item.clgentdate : <span className="text-amber-700 font-bold text-[10px]">Open Item</span>}
                             </td>
-                            {/* 8. PK (Posting Key) */}
+                            {/* 9. PK (Posting Key) */}
                             <td className="p-2.5 text-center font-mono text-slate-600">{item.postkey || ''}</td>
-                            {/* 9. D/C (Debit / Credit) */}
+                            {/* 10. D/C (Debit / Credit) */}
                             <td className="p-2.5 text-center font-mono font-semibold">{item.d_c_indic || ''}</td>
-                            {/* 10. Amount LC */}
+                            {/* 11. Amount LC */}
                             <td className={`p-2.5 text-right font-mono font-bold ${item.d_c_indic === 'S' ? 'text-emerald-700' : 'text-slate-900'}`}>
                               ₹{(item.amount_lc || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
-                            {/* 11. Amount 1 */}
+                            {/* 12. Amount 1 */}
                             <td className="p-2.5 text-right font-mono text-slate-700">
                               {item.amount1 !== undefined && item.amount1 !== null
                                 ? `₹${item.amount1.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                                 : ''}
                             </td>
-                            {/* 12. Reference Key */}
+                            {/* 13. Reference Key */}
                             <td className="p-2.5 font-mono text-slate-600 truncate max-w-[160px]" title={item.reference_key || ''}>
                               {item.reference_key || ''}
                             </td>
-                            {/* 13. Customer */}
+                            {/* 14. Customer */}
                             <td className="p-2.5 font-mono text-slate-700">{item.customer || ''}</td>
-                            {/* 14. Vendor */}
+                            {/* 15. Vendor */}
                             <td className="p-2.5 font-mono text-slate-700">{item.vendor || ''}</td>
-                            {/* 15. Material */}
+                            {/* 16. Material */}
                             <td className="p-2.5 font-mono text-slate-700">{item.material || ''}</td>
-                            {/* 16. Profit Center */}
+                            {/* 17. Profit Center */}
                             <td className="p-2.5 font-mono text-center text-slate-500">{item.profit_ctr || ''}</td>
-                            {/* 17. Cost Center */}
+                            {/* 18. Cost Center */}
                             <td className="p-2.5 font-mono text-center text-slate-500">{item.cost_ctr || ''}</td>
                           </tr>
                         );
                       })}
                       {/* SAP Subtotal row for each G/L account */}
                       <tr className="bg-[#fef9c3] font-mono font-bold text-slate-900 border-t-2 border-slate-300">
-                        <td colSpan={9} className="p-2.5 text-right text-slate-800">
+                        <td colSpan={10} className="p-2.5 text-right text-slate-800">
                           * Account {acctKey} Total:
                         </td>
                         <td className="p-2.5 text-right text-slate-900 text-sm font-black">

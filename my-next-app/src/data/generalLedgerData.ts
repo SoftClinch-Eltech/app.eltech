@@ -15,6 +15,7 @@ export interface GeneralLedgerItem {
   clgentdate?: string | null;
   posting_date: string;
   reference_key?: string | null;
+  gl_description?: string | null;
 }
 
 export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
@@ -34,7 +35,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "1",
     clgentdate: "2024-04-12",
     posting_date: "2024-04-12",
-    reference_key: "6242000127"
+    reference_key: "6242000127",
+    gl_description: "TRADE PAYABLES - LOCAL"
   },
   {
     documentno: "3624400050",
@@ -52,7 +54,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "31",
     clgentdate: "2024-04-23",
     posting_date: "2024-04-01",
-    reference_key: "362440005060002024"
+    reference_key: "362440005060002024",
+    gl_description: "CREDITORS - EXPENSES/OTHERS"
   },
   {
     documentno: "3624400051",
@@ -70,7 +73,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "31",
     clgentdate: "2024-04-24",
     posting_date: "2024-04-02",
-    reference_key: "362440005160002024"
+    reference_key: "362440005160002024",
+    gl_description: "CREDITORS - EXPENSES/OTHERS"
   },
   {
     documentno: "3624400052",
@@ -88,7 +92,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "40",
     clgentdate: null,
     posting_date: "2024-04-05",
-    reference_key: "362440005260002024"
+    reference_key: "362440005260002024",
+    gl_description: "CREDITORS - EXPENSES/OTHERS"
   },
   {
     documentno: "3624400053",
@@ -106,7 +111,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "40",
     clgentdate: null,
     posting_date: "2024-04-10",
-    reference_key: "362440005360002024"
+    reference_key: "362440005360002024",
+    gl_description: "RAW MATERIAL PURCHASES"
   },
   {
     documentno: "3624400054",
@@ -124,7 +130,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "50",
     clgentdate: "2024-04-28",
     posting_date: "2024-04-15",
-    reference_key: "362440005460002024"
+    reference_key: "362440005460002024",
+    gl_description: "RAW MATERIAL PURCHASES"
   },
   {
     documentno: "3624400055",
@@ -142,7 +149,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "01",
     clgentdate: null,
     posting_date: "2024-04-20",
-    reference_key: "362440005560002024"
+    reference_key: "362440005560002024",
+    gl_description: "DOMESTIC SALES REVENUE"
   },
   {
     documentno: "3624400056",
@@ -160,7 +168,8 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "50",
     clgentdate: "2024-04-29",
     posting_date: "2024-04-25",
-    reference_key: "362440005660002024"
+    reference_key: "362440005660002024",
+    gl_description: "DOMESTIC SALES REVENUE"
   },
   {
     documentno: "3624400057",
@@ -178,6 +187,7 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
     postkey: "40",
     clgentdate: null,
     posting_date: "2024-04-26",
-    reference_key: "362440005760002024"
+    reference_key: "362440005760002024",
+    gl_description: "CREDITORS - EXPENSES/OTHERS"
   }
 ];
