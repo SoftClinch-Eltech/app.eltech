@@ -344,7 +344,7 @@ const navSections = [
     title: 'Ledger Reporting',
     items: [
       { label: 'General Ledger', screen: 'GL_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Customer Ledger (Coming Soon)', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
+      { label: 'Customer Ledger', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
       { label: 'Vendor Ledger (Coming Soon)', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
       { label: 'Stock Ledger (Coming Soon)', screen: null, icon: FileSpreadsheet, disabled: true },
     ]
