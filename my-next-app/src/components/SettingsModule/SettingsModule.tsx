@@ -88,11 +88,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
           <button
             id="btn-settings-tab-company"
             onClick={() => setActiveTab('COMPANY')}
-            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${
-              activeTab === 'COMPANY'
+            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${activeTab === 'COMPANY'
                 ? 'bg-[#273B5E] text-white'
                 : 'hover:bg-slate-50 text-slate-600'
-            }`}
+              }`}
           >
             <Building className="w-4 h-4" />
             <span>Company Settings</span>
@@ -100,11 +99,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
           <button
             id="btn-settings-tab-theme"
             onClick={() => setActiveTab('THEME')}
-            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${
-              activeTab === 'THEME'
+            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${activeTab === 'THEME'
                 ? 'bg-[#273B5E] text-white'
                 : 'hover:bg-slate-50 text-slate-600'
-            }`}
+              }`}
           >
             <Sliders className="w-4 h-4" />
             <span>UX Theme Preferences</span>
@@ -112,11 +110,10 @@ export const SettingsModule: React.FC<SettingsModuleProps> = ({
           <button
             id="btn-settings-tab-audit"
             onClick={() => setActiveTab('AUDIT')}
-            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${
-              activeTab === 'AUDIT'
+            className={`flex items-center gap-2.5 w-full text-left p-2.5 rounded text-xs font-sans font-semibold transition-colors ${activeTab === 'AUDIT'
                 ? 'bg-[#273B5E] text-white'
                 : 'hover:bg-slate-50 text-slate-600'
-            }`}
+              }`}
           >
             <Terminal className="w-4 h-4" />
             <span>Security Audit Log</span>

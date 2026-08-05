@@ -197,7 +197,7 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
       <div className="p-6 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
           <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-amber-500" />
+            <Filter className="w-4 h-4 text-slate-300" />
             <div>
               <h3 className="font-bold text-xs">TRIAL BALANCE SELECTION</h3>
               <p className="text-[10px] text-gray-300">Transaction FAGLB03 / F.01</p>
@@ -459,7 +459,7 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
       <div className="p-6 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
           <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-amber-500" />
+            <BookOpen className="w-4 h-4 text-slate-300" />
             <div>
               <h3 className="font-bold text-xs">G/L ACCOUNT BALANCE SELECTION</h3>
               <p className="text-[10px] text-gray-300">Transaction FAGLB03</p>
@@ -627,7 +627,7 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
       <div className="p-6 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
           <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <PieChart className="w-4 h-4 text-amber-500" />
+            <PieChart className="w-4 h-4 text-slate-300" />
             <div>
               <h3 className="font-bold text-xs">PROFIT & LOSS SELECTION</h3>
               <p className="text-[10px] text-gray-300">Transaction F.01 Financial Statement Version</p>
@@ -786,7 +786,7 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
       <div className="p-6 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
           <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-amber-500" />
+            <Layers className="w-4 h-4 text-slate-300" />
             <div>
               <h3 className="font-bold text-xs">BALANCE SHEET SELECTION</h3>
               <p className="text-[10px] text-gray-300">Transaction F.01 Reporting</p>

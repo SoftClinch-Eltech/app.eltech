@@ -269,7 +269,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                   <div className="p-2 bg-slate-50 text-[#273B5E] rounded-lg">
                     <BookOpen className="w-5 h-5 text-[#963F29]" />
                   </div>
-                 
+
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-[#273B5E] group-hover:text-[#963F29] transition-colors">{tile.name}</h3>
@@ -297,7 +297,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           {/* Header */}
           <div className="bg-[#273B5E] text-white p-3.5 sm:p-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Filter className="w-5 h-5 text-amber-500 shrink-0" />
+              <Filter className="w-5 h-5 text-slate-300 shrink-0" />
               <div>
                 <h3 className="font-bold text-xs sm:text-sm tracking-tight uppercase">General Ledger Selection</h3>
               </div>
@@ -341,7 +341,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                 <span className="text-[11px] font-extrabold text-[#963F29] uppercase tracking-wider">Mandatory Fields</span>
                 <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-mono font-bold">Required</span>
               </div>
-              
+
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
                   Company Code <span className="text-rose-600 font-bold">*</span>
@@ -371,11 +371,10 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
                     disabled={glOption === 'open_items'}
-                    className={`w-full border rounded p-2 text-xs font-mono transition-all ${
-                      glOption === 'open_items'
+                    className={`w-full border rounded p-2 text-xs font-mono transition-all ${glOption === 'open_items'
                         ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
                         : 'bg-white border-[#D9DEE6] text-slate-800 focus:outline-none focus:border-[#273B5E]'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -413,11 +412,10 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <label
                   onClick={() => setGlOption('all_entries')}
-                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    glOption === 'all_entries'
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${glOption === 'all_entries'
                       ? 'border-[#273B5E] bg-[#273B5E]/5 text-[#273B5E] font-bold shadow-sm'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -433,11 +431,10 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
                 <label
                   onClick={() => setGlOption('open_items')}
-                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    glOption === 'open_items'
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${glOption === 'open_items'
                       ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold shadow-sm'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -453,11 +450,10 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
                 <label
                   onClick={() => setGlOption('cleared_items')}
-                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    glOption === 'cleared_items'
+                  className={`flex sm:flex-col items-center justify-between sm:justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${glOption === 'cleared_items'
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-sm'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -694,7 +690,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       <div className="p-6 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
           <div className="bg-[#273B5E] text-white p-4 flex items-center gap-2">
-            <Users className="w-4 h-4 text-amber-500" />
+            <Users className="w-4 h-4 text-slate-300" />
             <div>
               <h3 className="font-bold text-xs">CUSTOMER SUBSIDIARY SELECTION</h3>
               <p className="text-[10px] text-gray-300">Transaction FBL5N - Accounts Receivable</p>

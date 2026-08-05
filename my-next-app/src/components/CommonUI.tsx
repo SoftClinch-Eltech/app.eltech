@@ -86,7 +86,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   }, []);
 
   return (
-    <header className="bg-[#273B5E] text-white border-b border-slate-700 select-none shadow-sm h-14 sticky top-0 z-30 flex items-center justify-between px-4">
+    <header className="bg-[#273B5E] text-white border-b border-slate-700 select-none shadow-sm h-14 sticky top-0 z-50 flex items-center justify-between px-4">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-3">
         <div
@@ -323,26 +323,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
   };
 
   return (
-    <aside className={`border-r border-slate-200 bg-white text-slate-700 min-h-[calc(100vh-3.5rem)] sticky top-[3.5rem] overflow-y-auto transition-all ${collapsed ? 'w-20' : 'w-72'}`}>
+    <aside className={`border-r border-slate-200 bg-[#F4F6F9] text-slate-700 h-[calc(100vh-3.5rem)] sticky top-[3.5rem] flex flex-col overflow-hidden transition-all z-30 ${collapsed ? 'w-20' : 'w-72'}`}>
       <div className={`px-4 py-4 border-b border-slate-200 ${collapsed ? 'text-center' : ''}`}>
         <div className={`flex ${collapsed ? 'flex-col items-center gap-3' : 'items-center gap-3'}`}>
           <div className="w-11 h-11 rounded-2xl bg-[#273B5E] text-white flex items-center justify-center font-mono font-black text-sm shadow-sm">SC</div>
           {!collapsed && (
             <div className="text-left">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold">Softclinch</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">Softclinch</p>
               <h1 className="text-sm font-bold text-[#273B5E]">Consult Services</h1>
             </div>
           )}
           <button
             onClick={onToggle}
-            className="ml-auto rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 transition-colors"
+            className="ml-auto rounded-full bg-slate-200 p-2 text-slate-600 hover:bg-[#EBF4FF] hover:text-[#1B4B83] transition-colors"
             title={collapsed ? 'Open sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
         {!collapsed && (
-          <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px]">
+          <div className="mt-4 bg-white border border-slate-200 rounded-xl p-3 text-[11px]">
             <p className="text-slate-500 uppercase tracking-[0.2em] font-semibold">Active Client</p>
             <p className="mt-1 font-mono text-slate-800">
               {currentUser ? currentUser.username : 'CLNT 800'}
@@ -357,7 +357,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
           return (
             <div key={section.title} className={isSectionDisabled ? 'opacity-40 blur-[0.5px] pointer-events-none select-none' : ''}>
               {!collapsed && (
-                <div className="text-[9px] uppercase tracking-[0.25em] text-slate-400 font-semibold mb-3">{section.title}</div>
+                <div className="text-[9px] uppercase tracking-[0.25em] text-slate-500 font-semibold mb-3">{section.title}</div>
               )}
               <div className="space-y-1">
                 {section.items.map((item) => {
@@ -373,10 +373,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
                         if (disabled) return;
                         if (item.screen) onNavigate(item.screen);
                       }}
-                      className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-sm transition-colors ${disabled ? 'cursor-not-allowed opacity-50 blur-[0.5px]' : 'hover:bg-slate-100'} ${active ? 'bg-[#273B5E] text-white shadow-sm' : 'text-slate-700'}`}
+                      className={`w-full text-left rounded-lg px-3 py-2 flex items-center gap-3 text-sm transition-all duration-150 group ${disabled ? 'cursor-not-allowed opacity-50 blur-[0.5px]' : 'hover:bg-[#EBF4FF] hover:text-[#1B4B83] hover:translate-x-1'} ${active ? 'bg-[#E0EDFF] text-[#1B4B83] font-bold border-l-4 border-[#273B5E] shadow-xs' : 'text-slate-700'}`}
                       title={disabled ? 'Disabled' : item.label}
                     >
-                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500'}`} />
+                      <Icon className={`w-4 h-4 ${active ? 'text-[#1B4B83]' : 'text-slate-500 group-hover:text-[#1B4B83]'}`} />
                       {!collapsed && <span>{item.label}</span>}
                     </button>
                   );
@@ -461,11 +461,11 @@ interface OutputHeaderButtonBoxesProps {
 }
 
 export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = ({ fields, title, tcode, className, gridColsClass }) => {
-  const defaultGridCols = fields.length === 5 
-    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5' 
-    : fields.length === 7 
-    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7' 
-    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+  const defaultGridCols = fields.length === 5
+    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5'
+    : fields.length === 7
+      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7'
+      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 
   return (
     <div className={`bg-white border rounded-xl shadow-sm p-4 space-y-3 select-none ${className || 'border-[#D9DEE6]'}`}>
