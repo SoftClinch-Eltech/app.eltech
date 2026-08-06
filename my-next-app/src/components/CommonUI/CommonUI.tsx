@@ -134,7 +134,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   }, []);
 
   return (
-    <header className="bg-[#273B5E] text-white border-b border-slate-700/80 select-none shadow-sm h-14 sticky top-0 z-50 flex items-center justify-between px-4">
+    <header className="bg-[#273B5E] text-white border-b border-slate-700/80 select-none shadow-sm h-14 sticky top-0 z-[60] flex items-center justify-between px-4">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-3">
         {currentUser && onToggleSidebar && (
@@ -168,42 +168,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       </div>
 
-      {/* Global Command Search bar */}
-      <div className="hidden lg:flex items-center bg-[#1E293B] border border-slate-700/60 rounded-md w-80 px-3 py-1.5 text-xs gap-2">
-        <Search className="w-3.5 h-3.5 text-slate-400" />
-        <input
-          id="hdr-command-input"
-          type="text"
-          placeholder="Enter Transaction Code (e.g. /nFB03)"
-          className="bg-transparent text-slate-200 outline-none w-full text-xs font-mono placeholder:text-slate-500"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const val = e.currentTarget.value.trim().toLowerCase();
-              if (val === '/nfb03' || val === 'fb03') {
-                onNavigate('FIN_DOC_SEL');
-              } else if (val === '/nvf03' || val === 'vf03') {
-                onNavigate('INVOICE_SEL');
-              } else if (val === '/nfbl3n' || val === 'fbl3n') {
-                onNavigate('GL_LEDGER_SEL');
-              } else if (val === '/nfbl5n' || val === 'fbl5n') {
-                onNavigate('CUSTOMER_LEDGER_SEL');
-              } else if (val === '/nfbl1n' || val === 'fbl1n') {
-                onNavigate('VENDOR_LEDGER_SEL');
-              } else if (val === '/nf.01' || val === 'f.01') {
-                onNavigate('TRIAL_BALANCE_SEL');
-              } else if (val === '/ndashboard' || val === 'dashboard') {
-                onNavigate('DASHBOARD');
-              } else if (val === '/nusers' || val === 'user') {
-                onNavigate('USER_MASTER_MAIN');
-              } else if (val === '/nsettings' || val === 'settings') {
-                onNavigate('SETTINGS_MAIN');
-              }
-              e.currentTarget.value = '';
-            }
-          }}
-        />
-        <span className="bg-slate-700/60 text-slate-400 px-1 py-0.5 rounded text-[8px] font-mono">Enter</span>
-      </div>
+
 
       {/* Utility Area */}
       <div className="flex items-center gap-4">
@@ -439,11 +404,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeScreen, onN
       {/* Mobile Sidebar backdrop */}
       {!collapsed && (
         <div
-          className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-35 transition-opacity"
+          className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 transition-opacity"
           onClick={onToggle}
         />
       )}
-      <aside className={`border-r border-slate-200 bg-[#F4F6F9] text-slate-700 lg:h-[calc(100vh-3.5rem)] lg:max-h-[calc(100vh-3.5rem)] lg:sticky lg:top-[3.5rem] flex flex-col transition-all duration-300 ease-in-out z-30 overflow-hidden
+      <aside className={`border-r border-slate-200 bg-[#F4F6F9] text-slate-700 lg:h-[calc(100vh-3.5rem)] lg:max-h-[calc(100vh-3.5rem)] lg:sticky lg:top-[3.5rem] flex flex-col transition-all duration-300 ease-in-out z-50 overflow-hidden
         fixed inset-y-0 left-0 h-screen max-h-screen lg:translate-x-0
         ${collapsed ? '-translate-x-full lg:w-20' : 'translate-x-0 lg:w-72 w-72'}
       `}>
@@ -701,60 +666,177 @@ export const OutputHeaderButtonBoxes: React.FC<OutputHeaderButtonBoxesProps> = (
 // DATA TABLE TOOLBAR COMPONENT (SORTING, FILTERING, DOWNLOADS)
 // ============================================================================
 interface TableToolbarProps {
-  searchTerm: string;
-  onSearchChange: (val: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (val: string) => void;
   onClearFilters?: () => void;
   totalRecords?: number;
+  hideSearch?: boolean;
+  showRowsCount?: boolean;
 }
 
 export const TableToolbar: React.FC<TableToolbarProps> = ({
-  searchTerm,
+  searchTerm = '',
   onSearchChange,
   onClearFilters,
-  totalRecords = 0
+  totalRecords = 0,
+  hideSearch = true,
+  showRowsCount = false
 }) => {
-  const [freezeColumn, setFreezeColumn] = useState<boolean>(false);
-  const [columnResize, setColumnResize] = useState<boolean>(false);
+  const showSearch = !hideSearch && Boolean(onSearchChange);
+  const showClear = Boolean(onClearFilters);
+  const showCount = showRowsCount && totalRecords > 0;
+
+  if (!showSearch && !showClear && !showCount) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] border border-[#D9DEE6] border-b-0 rounded-t-lg p-3 select-none">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 bg-[#FFFFFF] border border-[#D9DEE6] border-b-0 rounded-t-lg p-3 select-none">
       {/* Search Input */}
-      <div className="flex items-center gap-2 bg-white border border-[#D9DEE6] rounded px-2.5 py-1.5 text-xs w-full sm:w-72">
-        <Search className="w-3.5 h-3.5 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Global table lookup..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="bg-transparent outline-none w-full text-slate-700 font-sans"
-        />
-        {searchTerm && (
+      {showSearch && onSearchChange && (
+        <div className="flex items-center gap-2 bg-white border border-[#D9DEE6] rounded px-2.5 py-1.5 text-xs w-full sm:w-72">
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Global table lookup..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="bg-transparent outline-none w-full text-slate-700 font-sans"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="text-slate-400 hover:text-slate-600 font-bold text-xs"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Grid Controls (Reset & Row Count) */}
+      {(showClear || showCount) && (
+        <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+          {showClear && (
+            <button
+              onClick={onClearFilters}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans bg-white text-slate-600 border border-[#D9DEE6] hover:bg-slate-50 transition-colors"
+              title="Clear active filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Reset Grid</span>
+            </button>
+          )}
+
+          {/* Record count indicator */}
+          {showCount && (
+            <span className="text-[10px] text-slate-400 font-mono pl-2">
+              {totalRecords} rows
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// DYNAMIC 3-KEY-VALUE COLUMN FILTER BAR COMPONENT
+// ============================================================================
+export interface ColumnOption {
+  key: string;
+  label: string;
+}
+
+export interface ColumnFilterState {
+  columnKey: string;
+  value: string;
+}
+
+interface ColumnFilterBarProps {
+  columns: ColumnOption[];
+  filters: ColumnFilterState[];
+  onFilterChange: (index: number, columnKey: string, value: string) => void;
+  onClearAll: () => void;
+  title?: string;
+}
+
+export const ColumnFilterBar: React.FC<ColumnFilterBarProps> = ({
+  columns,
+  filters,
+  onFilterChange,
+  onClearAll,
+  title = "Header Dynamic Column Filters"
+}) => {
+  const activeFiltersCount = filters.filter(f => f.columnKey || f.value).length;
+
+  return (
+    <div className="bg-white border border-[#D9DEE6] rounded-xl shadow-xs p-3 space-y-2.5 select-none">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded bg-amber-50 text-[#963F29]">
+            <Sliders className="w-3.5 h-3.5" />
+          </div>
+          <span className="text-xs font-bold text-[#273B5E] uppercase tracking-wider font-sans">
+            {title} ({filters.length} Filters)
+          </span>
+        </div>
+        {activeFiltersCount > 0 && (
           <button
-            onClick={() => onSearchChange('')}
-            className="text-slate-400 hover:text-slate-600 font-bold text-xs"
+            onClick={onClearAll}
+            className="flex items-center gap-1 text-[11px] font-sans text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded transition-colors font-medium cursor-pointer"
           >
-            ×
+            <RotateCcw className="w-3 h-3" />
+            <span>Reset Filters</span>
           </button>
         )}
       </div>
 
-      {/* Grid Controls (Reset & Row Count) */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {onClearFilters && (
-          <button
-            onClick={onClearFilters}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans bg-white text-slate-600 border border-[#D9DEE6] hover:bg-slate-50 transition-colors"
-            title="Clear active filters"
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+        {filters.map((filter, idx) => (
+          <div
+            key={idx}
+            className="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-[#F8FAFC] focus-within:border-[#273B5E] focus-within:bg-white transition-all shadow-2xs"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Reset Grid</span>
-          </button>
-        )}
+            <span className="text-[10px] font-mono font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded shrink-0">
+              Filter {idx + 1}
+            </span>
+            
+            {/* Header Dropdown (Key) */}
+            <select
+              value={filter.columnKey}
+              onChange={(e) => onFilterChange(idx, e.target.value, filter.value)}
+              className="bg-transparent text-slate-800 text-xs font-semibold outline-none w-1/2 cursor-pointer border-r border-slate-300 pr-1 truncate font-sans"
+            >
+              <option value="">-- Select Header --</option>
+              {columns.map((col) => (
+                <option key={col.key} value={col.key}>
+                  {col.label}
+                </option>
+              ))}
+            </select>
 
-        {/* Record count indicator */}
-        <span className="text-[10px] text-slate-400 font-mono pl-2">
-          {totalRecords} rows
-        </span>
+            {/* Filter Value Input */}
+            <input
+              type="text"
+              placeholder={filter.columnKey ? "Value / Number..." : "Select header"}
+              disabled={!filter.columnKey}
+              value={filter.value}
+              onChange={(e) => onFilterChange(idx, filter.columnKey, e.target.value)}
+              className="bg-transparent text-slate-800 text-xs outline-none w-1/2 placeholder:text-slate-400 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+
+            {filter.value && (
+              <button
+                onClick={() => onFilterChange(idx, filter.columnKey, '')}
+                className="text-slate-400 hover:text-slate-600 font-bold text-xs shrink-0 px-1"
+                title="Clear filter value"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
