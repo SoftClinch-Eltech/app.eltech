@@ -1867,6 +1867,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       { key: 'documentno', label: 'DocumentNo' },
       { key: 'doc_type', label: 'DocType' },
       { key: 'customer', label: 'Customer' },
+      { key: 'customer_name', label: 'Customer Name' },
       { key: 'g_l_acct2', label: 'G/L Acct' },
       { key: 'cocode', label: 'CoCode' },
       { key: 'assignment', label: 'Assignment' },
@@ -1887,6 +1888,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       { key: 'documentno', label: 'DocumentNo', minWidth: '110px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono font-bold text-[#963F29]">{i.documentno}</span> },
       { key: 'doc_type', label: 'DocType', minWidth: '70px', align: 'center', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700 font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">{i.doc_type || 'SA'}</span> },
       { key: 'customer', label: 'Customer', minWidth: '100px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700 font-bold">{i.customer}</span> },
+      { key: 'customer_name', label: 'Customer Name', minWidth: '160px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-sans font-medium text-slate-800">{i.customer_name || ''}</span> },
       { key: 'g_l_acct2', label: 'G/L Acct', minWidth: '100px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700">{i.g_l_acct2}</span> },
       { key: 'cocode', label: 'CoCode', minWidth: '70px', align: 'center', render: (i: CustomerLedgerItem) => <span className="font-mono text-center text-slate-600">{i.cocode}</span> },
       { key: 'assignment', label: 'Assignment', minWidth: '110px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-600">{i.assignment || ''}</span> },
@@ -1965,6 +1967,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
             const custDebitTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'S' ? (i.amount_lc || 0) : 0), 0);
             const custCreditTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'H' ? (i.amount_lc || 0) : 0), 0);
             const custNetTotal = custDebitTotal - custCreditTotal;
+            const groupCustName = items.find(i => i.customer_name && i.customer_name.trim())?.customer_name;
 
             return (
               <div key={custKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
@@ -1974,9 +1977,9 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                     <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
                       Customer Account: {custKey}
                     </span>
-                    {items[0]?.customer_name && (
+                    {groupCustName && (
                       <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
-                        Customer Name: {items[0].customer_name}
+                        Customer Name: {groupCustName}
                       </span>
                     )}
                   </div>
@@ -2312,6 +2315,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       { key: 'documentno', label: 'DocumentNo' },
       { key: 'doc_type', label: 'DocType' },
       { key: 'vendor', label: 'Vendor' },
+      { key: 'vendor_name', label: 'Vendor Name' },
       { key: 'g_l_acct2', label: 'G/L Acct' },
       { key: 'cocode', label: 'CoCode' },
       { key: 'assignment', label: 'Assignment' },
@@ -2332,6 +2336,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       { key: 'documentno', label: 'DocumentNo', minWidth: '110px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono font-bold text-[#963F29]">{i.documentno}</span> },
       { key: 'doc_type', label: 'DocType', minWidth: '70px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700 font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">{i.doc_type || 'SA'}</span> },
       { key: 'vendor', label: 'Vendor', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700 font-bold">{i.vendor}</span> },
+      { key: 'vendor_name', label: 'Vendor Name', minWidth: '160px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-sans font-medium text-slate-800">{i.vendor_name || ''}</span> },
       { key: 'g_l_acct2', label: 'G/L Acct', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.g_l_acct2}</span> },
       { key: 'cocode', label: 'CoCode', minWidth: '70px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-center text-slate-600">{i.cocode}</span> },
       { key: 'assignment', label: 'Assignment', minWidth: '110px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-600">{i.assignment || ''}</span> },
@@ -2410,6 +2415,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
             const vendDebitTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'S' ? (i.amount_lc || 0) : 0), 0);
             const vendCreditTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'H' ? (i.amount_lc || 0) : 0), 0);
             const vendNetTotal = vendDebitTotal - vendCreditTotal;
+            const groupVendorName = items.find(i => i.vendor_name && i.vendor_name.trim())?.vendor_name;
 
             return (
               <div key={vendKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
@@ -2419,9 +2425,9 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                     <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
                       Vendor Account: {vendKey}
                     </span>
-                    {items[0]?.vendor_name && (
+                    {groupVendorName && (
                       <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
-                        Vendor Name: {items[0].vendor_name}
+                        Vendor Name: {groupVendorName}
                       </span>
                     )}
                   </div>
