@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Screen, TrialBalanceItem, LedgerEntry } from '../../types';
 import { initialTrialBalanceItems, mockGLEntries } from '../../data/sapMockData';
 import { TableToolbar, OutputHeaderButtonBoxes, ButtonBoxField } from '../CommonUI/CommonUI';
+import { exportToExcel } from '../../utils/exportToExcel';
 import {
   FileText,
   ArrowLeft,
@@ -13,7 +14,9 @@ import {
   Layers,
   Search,
   BookOpen,
-  PieChart
+  PieChart,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 
 interface FinancialStatementsModuleProps {
@@ -126,6 +129,129 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
     return { assets, liabilities, equity, totalAssets, totalLiabilities, totalEquity };
   }, [trialBalanceItems]);
 
+
+  // ============================================================================
+  // EXCEL EXPORT HANDLERS
+  // ============================================================================
+  const handleExportTrialBalanceExcel = () => {
+    const exportData = filteredTrialBalance.map(item => ({
+      account: item.account,
+      description: item.description,
+      cocode: companyCode,
+      fiscalYear: fiscalYear,
+      currency: 'INR',
+      category: item.category,
+      openingBalance: item.openingBalance * 83,
+      debit: item.debit * 83,
+      credit: item.credit * 83,
+      closingBalance: item.closingBalance * 83
+    }));
+
+    const columnMap = {
+      account: 'Account Code',
+      description: 'Account Description',
+      cocode: 'Company Code',
+      fiscalYear: 'Fiscal Year',
+      currency: 'Currency',
+      category: 'Category',
+      openingBalance: 'Opening Balance (₹)',
+      debit: 'Debit (₹)',
+      credit: 'Credit (₹)',
+      closingBalance: 'Closing Balance (₹)'
+    };
+
+    exportToExcel(exportData, `Trial_Balance_${companyCode}_${fiscalYear}`, 'Trial Balance', columnMap);
+    triggerToast(`Exported ${exportData.length} Trial Balance items to Excel!`, 'success');
+  };
+
+  const handleExportBalanceDispExcel = () => {
+    const exportData = balanceDisplayEntries.map(entry => ({
+      postingDate: entry.postingDate,
+      documentNum: entry.documentNum,
+      reference: entry.reference,
+      cocode: companyCode,
+      fiscalYear: fiscalYear,
+      description: entry.description,
+      debit: entry.debit * 83,
+      credit: entry.credit * 83,
+      balance: entry.balance * 83
+    }));
+
+    const columnMap = {
+      postingDate: 'Posting Date',
+      documentNum: 'Document No',
+      reference: 'Reference',
+      cocode: 'Company Code',
+      fiscalYear: 'Fiscal Year',
+      description: 'Posting Text',
+      debit: 'Debit Amount (₹)',
+      credit: 'Credit Amount (₹)',
+      balance: 'Balance Carryforward (₹)'
+    };
+
+    exportToExcel(exportData, `Balance_Display_${accountNum}_${companyCode}`, 'Balance Display', columnMap);
+    triggerToast(`Exported ${exportData.length} Account Balance postings to Excel!`, 'success');
+  };
+
+  const handleExportPLSheetExcel = () => {
+    const exportData = [
+      ...pandLResult.revenueItems.map(item => ({
+        type: 'REVENUE',
+        account: item.account,
+        description: item.description,
+        amount: Math.abs(item.closingBalance) * 83
+      })),
+      ...pandLResult.expenseItems.map(item => ({
+        type: 'EXPENSE',
+        account: item.account,
+        description: item.description,
+        amount: item.closingBalance * 83
+      }))
+    ];
+
+    const columnMap = {
+      type: 'Line Type',
+      account: 'Account Number',
+      description: 'Description',
+      amount: 'Amount (₹)'
+    };
+
+    exportToExcel(exportData, `Profit_Loss_Statement_${companyCode}_${fiscalYear}`, 'Profit & Loss', columnMap);
+    triggerToast(`Exported Profit & Loss Statement to Excel!`, 'success');
+  };
+
+  const handleExportBalanceSheetExcel = () => {
+    const exportData = [
+      ...balanceSheetResult.assets.map(item => ({
+        section: 'ASSETS',
+        account: item.account,
+        description: item.description,
+        amount: item.closingBalance * 83
+      })),
+      ...balanceSheetResult.liabilities.map(item => ({
+        section: 'LIABILITIES',
+        account: item.account,
+        description: item.description,
+        amount: Math.abs(item.closingBalance) * 83
+      })),
+      ...balanceSheetResult.equity.map(item => ({
+        section: 'EQUITY',
+        account: item.account,
+        description: item.description,
+        amount: Math.abs(item.closingBalance) * 83
+      }))
+    ];
+
+    const columnMap = {
+      section: 'Section',
+      account: 'Account Number',
+      description: 'Description',
+      amount: 'Amount (₹)'
+    };
+
+    exportToExcel(exportData, `Balance_Sheet_${companyCode}_${fiscalYear}`, 'Balance Sheet', columnMap);
+    triggerToast(`Exported Corporate Balance Sheet to Excel!`, 'success');
+  };
 
   // ============================================================================
   // RENDER SECTIONS
@@ -374,7 +500,7 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
                 return;
               }
               if (trialBalanceItems.some(item => item.account === fastAccountNum.trim())) {
-                triggerToast(`G/L Account ${fastAccountNum} already exists in Trial Balance!`,'warning');
+                triggerToast(`G/L Account ${fastAccountNum} already exists in Trial Balance!`, 'warning');
                 return;
               }
               const firstDigit = fastAccountNum.trim()[0];
@@ -409,7 +535,9 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
           <TableToolbar
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            onExportExcel={handleExportTrialBalanceExcel}
             totalRecords={filteredTrialBalance.length}
+            hideSearch={false}
           />
 
           <div className="overflow-x-auto">
@@ -573,7 +701,9 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
           <TableToolbar
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            onExportExcel={handleExportBalanceDispExcel}
             totalRecords={balanceDisplayEntries.length}
+            hideSearch={false}
           />
 
           <div className="overflow-x-auto">
@@ -702,14 +832,25 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
               Company Code: {companyCode} | Year: {fiscalYear} | Period: {period}
             </p>
           </div>
-          <button
-            id="btn-pl-rep-back"
-            onClick={() => onNavigate('PROFIT_LOSS_SEL')}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Selection Screen</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleExportPLSheetExcel}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] rounded-md text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Download P&L Statement to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+              <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+              <span>Download Excel</span>
+            </button>
+            <button
+              id="btn-pl-rep-back"
+              onClick={() => onNavigate('PROFIT_LOSS_SEL')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Selection Screen</span>
+            </button>
+          </div>
         </div>
 
         {/* Unified Button Box Metadata Grid replacing standard summary cards */}
@@ -849,14 +990,25 @@ export const FinancialStatementsModule: React.FC<FinancialStatementsModuleProps>
               Company Code: {companyCode} | Reporting Year: {fiscalYear}
             </p>
           </div>
-          <button
-            id="btn-bs-rep-back"
-            onClick={() => onNavigate('BALANCE_SHEET_SEL')}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Selection Screen</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleExportBalanceSheetExcel}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] rounded-md text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Download Balance Sheet to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+              <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+              <span>Download Excel</span>
+            </button>
+            <button
+              id="btn-bs-rep-back"
+              onClick={() => onNavigate('BALANCE_SHEET_SEL')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Selection Screen</span>
+            </button>
+          </div>
         </div>
 
         {/* Unified Button Box Metadata Grid */}

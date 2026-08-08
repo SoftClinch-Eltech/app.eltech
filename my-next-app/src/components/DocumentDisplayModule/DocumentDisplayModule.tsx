@@ -10,6 +10,7 @@ import {
 } from '../../data/sapMockData';
 import { TableToolbar, OutputHeaderButtonBoxes, ButtonBoxField } from '../CommonUI/CommonUI';
 import { API_BASE_URL } from '../../config/api';
+import { exportToExcel } from '../../utils/exportToExcel';
 import {
   Receipt,
   ArrowLeft,
@@ -24,7 +25,8 @@ import {
   Truck,
   FileText,
   RefreshCw,
-  X
+  X,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export interface FinancialDocumentHeader {
@@ -407,6 +409,189 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
     ];
   }, []);
 
+  // ============================================================================
+  // EXCEL EXPORT HANDLERS
+  // ============================================================================
+  const handleExportFinDocExcel = () => {
+    if (apiFinancialData && apiFinancialData.results && apiFinancialData.results.length > 0) {
+      const allItems: any[] = [];
+      apiFinancialData.results.forEach(res => {
+        const header = res.document_header;
+        res.line_items.forEach((item, idx) => {
+          allItems.push({
+            itemNo: item.item1 != null ? item.item1 : idx + 1,
+            documentno: header.documentno,
+            ref_key: header.ref_key || '',
+            pstng_date: header.pstng_date || '',
+            doc_date: header.doc_date || '',
+            quantity: item.quantity || 0,
+            customer: item.customer || '',
+            g_l_acct2: item.g_l_acct2 || '',
+            assignment: item.assignment || '',
+            description: item.long_text || item.logtsx || item.ska1_desc || '',
+            amount1: item.amount1 || 0,
+            amount_lc: item.amount_lc || 0,
+            d_c_indic: item.d_c_indic || '',
+            acct_type: item.acct_type || '',
+            postkey: item.postkey || '',
+            cost_ctr: item.cost_ctr || '',
+            profit_ctr: item.profit_ctr || '',
+            material: item.material || ''
+          });
+        });
+      });
+
+      const columnMap = {
+        itemNo: 'Item No',
+        documentno: 'Document No',
+        ref_key: 'Reference Key',
+        pstng_date: 'Posting Date',
+        doc_date: 'Doc Date',
+        quantity: 'Quantity',
+        customer: 'Customer ID',
+        g_l_acct2: 'G/L Account',
+        assignment: 'Assignment',
+        description: 'G/L Description',
+        amount1: 'Amount 1',
+        amount_lc: 'Amount LC (₹)',
+        d_c_indic: 'D/C',
+        acct_type: 'Acct Type',
+        postkey: 'Posting Key',
+        cost_ctr: 'Cost Center',
+        profit_ctr: 'Profit Center',
+        material: 'Material'
+      };
+
+      exportToExcel(allItems, `Financial_Document_${docNumber}`, 'Financial Document', columnMap);
+      triggerToast(`Exported ${allItems.length} Financial Document items to Excel!`, 'success');
+      return;
+    }
+
+    // Local / Indian fallback export
+    const exportItems = filteredIndianInvoices.map((item, idx) => ({
+      itemNo: idx + 1,
+      docNo: item.docNo,
+      quantity: item.quantity,
+      customerId: 'CUST-IN-401',
+      glAcct: '0000400000',
+      assignment: 'PO-IN-98101',
+      description: 'Sales Revenue Account Domestic',
+      netValue: item.netValue,
+      amountLc: item.netValue + item.tax,
+      dc: 'S',
+      acctType: 'D',
+      postKey: '01',
+      costCtr: 'CC-IN-100',
+      profitCtr: '07',
+      material: item.material,
+      remarks: `${item.customerName} - ${item.customerState}`
+    }));
+
+    const columnMap = {
+      itemNo: 'Item No',
+      docNo: 'Document No',
+      quantity: 'Quantity (MT)',
+      customerId: 'Customer ID',
+      glAcct: 'G/L Account',
+      assignment: 'Assignment',
+      description: 'G/L Description',
+      netValue: 'Net Value (₹)',
+      amountLc: 'Amount LC (₹)',
+      dc: 'D/C Indicator',
+      acctType: 'Account Type',
+      postKey: 'Posting Key',
+      costCtr: 'Cost Center',
+      profitCtr: 'Profit Center',
+      material: 'Material',
+      remarks: 'Customer & State'
+    };
+
+    exportToExcel(exportItems, `Financial_Document_${docNumber}`, 'Financial Document', columnMap);
+    triggerToast(`Exported ${exportItems.length} Financial Document items to Excel!`, 'success');
+  };
+
+  const handleExportInvoiceExcel = () => {
+    if (apiInvoiceData && apiInvoiceData.results && apiInvoiceData.results.length > 0) {
+      const allItems: any[] = [];
+      apiInvoiceData.results.forEach(res => {
+        const header = res.document_header;
+        res.line_items.forEach((item, idx) => {
+          allItems.push({
+            itemNo: item.line_item != null ? item.line_item : item.item_no != null ? item.item_no : idx + 1,
+            bill_doc: header.bill_doc || apiInvoiceData.invoice_number,
+            material: item.material || '',
+            description: item.description || item.material_desc || '',
+            quantity: item.bill_qty != null ? item.bill_qty : item.quantity || 0,
+            netValue: item.net_value != null ? item.net_value : item.net_val != null ? item.net_val : header.net || 0,
+            tax: item.tax != null ? item.tax : item.tax_amount != null ? item.tax_amount : header.tax || 0,
+            profit_ctr: item.profit_ctr || '',
+            cost_ctr: item.cost_ctr || '',
+            sales_org: item.sales_org || header.sales_org || '',
+            sales_off: item.sales_off || '',
+            dist_channel: item.dist_channel || item.distribution_channel || header.distr_chl || '',
+            division: item.division || header.division || '',
+            rate: item.rate || 0,
+            gross: item.gross_val != null ? item.gross_val : item.gross || 0
+          });
+        });
+      });
+
+      const columnMap = {
+        itemNo: 'Item No',
+        bill_doc: 'Invoice Number',
+        material: 'Material',
+        description: 'Description',
+        quantity: 'Quantity',
+        netValue: 'Net Value (₹)',
+        tax: 'Tax (₹)',
+        profit_ctr: 'Profit Center',
+        cost_ctr: 'Cost Center',
+        sales_org: 'Sales Org',
+        sales_off: 'Sales Off',
+        dist_channel: 'Dist Channel',
+        division: 'Division',
+        rate: 'Rate',
+        gross: 'Gross Value (₹)'
+      };
+
+      exportToExcel(allItems, `Invoice_${invoiceNumber}`, 'Invoice Document', columnMap);
+      triggerToast(`Exported ${allItems.length} Invoice items to Excel!`, 'success');
+      return;
+    }
+
+    // Local Indian Invoice Export
+    const exportItems = filteredIndianInvoices.map((item, idx) => ({
+      itemNo: item.itemNo || idx + 1,
+      docNo: item.docNo,
+      material: item.material,
+      customerName: item.customerName,
+      quantity: item.quantity,
+      netValue: item.netValue,
+      tax: item.tax,
+      totalGross: item.netValue + item.tax,
+      pcCc: item.pcCc,
+      salesOffice: item.salesOffice,
+      customerState: item.customerState
+    }));
+
+    const columnMap = {
+      itemNo: 'Item No',
+      docNo: 'Invoice Number',
+      material: 'Material Description',
+      customerName: 'Customer Name',
+      quantity: 'Quantity',
+      netValue: 'Net Value (₹)',
+      tax: 'Tax Amount (₹)',
+      totalGross: 'Total Gross Value (₹)',
+      pcCc: 'Profit/Cost Center',
+      salesOffice: 'Sales Office',
+      customerState: 'State'
+    };
+
+    exportToExcel(exportItems, `Invoice_${invoiceNumber}`, 'Invoice Document', columnMap);
+    triggerToast(`Exported ${exportItems.length} Invoice items to Excel!`, 'success');
+  };
+
   // Export actions
   const renderFinancialReport = () => {
     if (apiFinancialData && apiFinancialData.results && apiFinancialData.results.length > 0) {
@@ -488,7 +673,9 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                     <TableToolbar
                       searchTerm={searchTerm}
                       onSearchChange={setSearchTerm}
+                      onExportExcel={handleExportFinDocExcel}
                       totalRecords={filteredItems.length}
+                      hideSearch={false}
                     />
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -618,7 +805,13 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
               </h3>
             </div>
             <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
-              {/* Right side toolbar placeholder */}
+              <TableToolbar
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                onExportExcel={handleExportFinDocExcel}
+                totalRecords={filteredIndianInvoices.length}
+                hideSearch={false}
+              />
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -777,7 +970,9 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
               <TableToolbar
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
+                onExportExcel={handleExportFinDocExcel}
                 totalRecords={activeBSEGItems.length}
+                hideSearch={false}
               />
 
               <div className="overflow-x-auto">
@@ -970,7 +1165,9 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
                     <TableToolbar
                       searchTerm={searchTerm}
                       onSearchChange={setSearchTerm}
+                      onExportExcel={handleExportInvoiceExcel}
                       totalRecords={filteredItems.length}
+                      hideSearch={false}
                     />
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -1088,6 +1285,13 @@ export const DocumentDisplayModule: React.FC<DocumentDisplayModuleProps> = ({
               </h3>
             </div>
             <div className="bg-white rounded-lg border-2 border-[#963F29] overflow-hidden shadow-sm">
+              <TableToolbar
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                onExportExcel={handleExportInvoiceExcel}
+                totalRecords={filteredIndianInvoices.length}
+                hideSearch={false}
+              />
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 border-b-2 border-[#963F29]/40 text-slate-800">

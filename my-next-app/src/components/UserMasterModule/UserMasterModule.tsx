@@ -242,10 +242,10 @@ export const UserMasterModule: React.FC<UserMasterModuleProps> = ({
                     <td className="p-3 font-mono text-[11px] text-[#963F29] font-bold">{user.role}</td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-bold leading-none ${user.status === 'Active'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : user.status === 'Locked'
-                            ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                            : 'bg-slate-50 text-slate-600 border border-slate-200'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : user.status === 'Locked'
+                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200'
                         }`}>
                         {user.status}
                       </span>

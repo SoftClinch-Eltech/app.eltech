@@ -1,5 +1,6 @@
 export interface CustomerLedgerItem {
   documentno: string;
+  doc_type?: string | null;
   g_l_acct2: string;
   cocode: string;
   assignment: string | null;

@@ -1,5 +1,6 @@
 export interface GeneralLedgerItem {
   documentno: string;
+  doc_type?: string | null;
   g_l_acct2: string;
   cocode: string;
   assignment?: string | null;
@@ -21,6 +22,7 @@ export interface GeneralLedgerItem {
 export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
   {
     documentno: "2624600088",
+    doc_type: "DZ",
     g_l_acct2: "20401001",
     cocode: "6000",
     assignment: "6242000127",
@@ -40,6 +42,7 @@ export const sampleGeneralLedgerData: GeneralLedgerItem[] = [
   },
   {
     documentno: "3624400050",
+    doc_type: "KR",
     g_l_acct2: "10502004",
     cocode: "6000",
     assignment: "614-008",

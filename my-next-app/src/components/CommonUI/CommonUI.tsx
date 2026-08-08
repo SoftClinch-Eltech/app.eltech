@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ChevronDown,
   FileSpreadsheet,
+  Download,
   FileText,
   HelpCircle,
   Clock,
@@ -23,7 +24,8 @@ import {
   LayoutGrid,
   ShieldCheck,
   Archive,
-  Menu
+  Menu,
+  ArrowUpDown
 } from 'lucide-react';
 
 // ============================================================================
@@ -310,7 +312,7 @@ const navSections = [
     items: [
       { label: 'General Ledger', screen: 'GL_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
       { label: 'Customer Ledger', screen: 'CUSTOMER_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
-      { label: 'Vendor Ledger (Coming Soon)', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet, disabled: true },
+      { label: 'Vendor Ledger', screen: 'VENDOR_LEDGER_SEL' as Screen, icon: FileSpreadsheet },
       { label: 'Stock Ledger (Coming Soon)', screen: null, icon: FileSpreadsheet, disabled: true },
     ]
   },
@@ -669,6 +671,8 @@ interface TableToolbarProps {
   searchTerm?: string;
   onSearchChange?: (val: string) => void;
   onClearFilters?: () => void;
+  onExportExcel?: () => void;
+  isExporting?: boolean;
   totalRecords?: number;
   hideSearch?: boolean;
   showRowsCount?: boolean;
@@ -678,20 +682,23 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   searchTerm = '',
   onSearchChange,
   onClearFilters,
+  onExportExcel,
+  isExporting = false,
   totalRecords = 0,
   hideSearch = true,
   showRowsCount = false
 }) => {
   const showSearch = !hideSearch && Boolean(onSearchChange);
   const showClear = Boolean(onClearFilters);
+  const showExport = Boolean(onExportExcel);
   const showCount = showRowsCount && totalRecords > 0;
 
-  if (!showSearch && !showClear && !showCount) {
+  if (!showSearch && !showClear && !showExport && !showCount) {
     return null;
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 bg-[#FFFFFF] border border-[#D9DEE6] border-b-0 rounded-t-lg p-3 select-none">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] border border-[#D9DEE6] border-b-0 rounded-t-lg p-3 select-none">
       {/* Search Input */}
       {showSearch && onSearchChange && (
         <div className="flex items-center gap-2 bg-white border border-[#D9DEE6] rounded px-2.5 py-1.5 text-xs w-full sm:w-72">
@@ -714,28 +721,39 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         </div>
       )}
 
-      {/* Grid Controls (Reset & Row Count) */}
-      {(showClear || showCount) && (
-        <div className="flex flex-wrap items-center gap-1.5 ml-auto">
-          {showClear && (
-            <button
-              onClick={onClearFilters}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans bg-white text-slate-600 border border-[#D9DEE6] hover:bg-slate-50 transition-colors"
-              title="Clear active filters"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Reset Grid</span>
-            </button>
-          )}
+      {/* Grid Controls (Export Excel, Reset & Row Count) */}
+      <div className="flex flex-wrap items-center gap-2 ml-auto">
+        {showExport && onExportExcel && (
+          <button
+            onClick={onExportExcel}
+            disabled={isExporting}
+            className="group flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-sans font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
+            title="Download report data as Microsoft Excel spreadsheet (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+            <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+            <span>{isExporting ? 'Preparing Excel...' : 'Download Excel'}</span>
+          </button>
+        )}
 
-          {/* Record count indicator */}
-          {showCount && (
-            <span className="text-[10px] text-slate-400 font-mono pl-2">
-              {totalRecords} rows
-            </span>
-          )}
-        </div>
-      )}
+        {showClear && (
+          <button
+            onClick={onClearFilters}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-sans bg-white text-slate-600 border border-[#D9DEE6] hover:bg-slate-50 transition-colors"
+            title="Clear active filters"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Reset Grid</span>
+          </button>
+        )}
+
+        {/* Record count indicator */}
+        {showCount && (
+          <span className="text-[10px] text-slate-400 font-mono pl-2">
+            {totalRecords} rows
+          </span>
+        )}
+      </div>
     </div>
   );
 };
@@ -759,6 +777,10 @@ interface ColumnFilterBarProps {
   onFilterChange: (index: number, columnKey: string, value: string) => void;
   onClearAll: () => void;
   title?: string;
+  sortColumn?: string;
+  onSortColumnChange?: (columnKey: string) => void;
+  sortDirection?: 'asc' | 'desc';
+  onSortDirectionChange?: (dir: 'asc' | 'desc') => void;
 }
 
 export const ColumnFilterBar: React.FC<ColumnFilterBarProps> = ({
@@ -766,13 +788,17 @@ export const ColumnFilterBar: React.FC<ColumnFilterBarProps> = ({
   filters,
   onFilterChange,
   onClearAll,
-  title = "Header Dynamic Column Filters"
+  title = "Header Dynamic Column Filters",
+  sortColumn,
+  onSortColumnChange,
+  sortDirection,
+  onSortDirectionChange
 }) => {
   const activeFiltersCount = filters.filter(f => f.columnKey || f.value).length;
 
   return (
     <div className="bg-white border border-[#D9DEE6] rounded-xl shadow-xs p-3 space-y-2.5 select-none">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
         <div className="flex items-center gap-2">
           <div className="p-1 rounded bg-amber-50 text-[#963F29]">
             <Sliders className="w-3.5 h-3.5" />
@@ -780,15 +806,68 @@ export const ColumnFilterBar: React.FC<ColumnFilterBarProps> = ({
           <span className="text-xs font-bold text-[#273B5E] uppercase tracking-wider font-sans">
             {title} ({filters.length} Filters)
           </span>
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={onClearAll}
+              className="flex items-center gap-1 text-[10px] font-sans text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded transition-colors font-semibold cursor-pointer ml-1"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
-        {activeFiltersCount > 0 && (
-          <button
-            onClick={onClearAll}
-            className="flex items-center gap-1 text-[11px] font-sans text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded transition-colors font-medium cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset Filters</span>
-          </button>
+
+        {/* Shortlist & Order Controls (Positioned in Top-Right Corner) */}
+        {sortColumn !== undefined && onSortColumnChange && sortDirection !== undefined && onSortDirectionChange && (
+          <div className="flex flex-wrap items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 shadow-2xs self-end md:self-auto">
+            <div className="flex items-center gap-1 text-[#273B5E]">
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#963F29]" />
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 font-sans">
+                Shortlist Sort:
+              </span>
+            </div>
+
+            <select
+              value={sortColumn}
+              onChange={(e) => onSortColumnChange(e.target.value)}
+              className="bg-white border border-slate-300 rounded px-2 py-0.5 text-xs font-bold text-slate-800 outline-none focus:border-[#273B5E] cursor-pointer max-w-[150px] truncate"
+            >
+              {columns.map((col) => (
+                <option key={col.key} value={col.key}>
+                  {col.label}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center bg-slate-200/80 p-0.5 rounded-md gap-0.5">
+              <button
+                type="button"
+                onClick={() => onSortDirectionChange('asc')}
+                title="Shortlist Ascending Order"
+                className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all flex items-center gap-0.5 ${
+                  sortDirection === 'asc'
+                    ? 'bg-[#273B5E] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <span>↑</span>
+                <span>ASC</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSortDirectionChange('desc')}
+                title="Shortlist Descending Order"
+                className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all flex items-center gap-0.5 ${
+                  sortDirection === 'desc'
+                    ? 'bg-[#963F29] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <span>↓</span>
+                <span>DESC</span>
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

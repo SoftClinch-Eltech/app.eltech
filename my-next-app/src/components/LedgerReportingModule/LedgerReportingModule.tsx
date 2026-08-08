@@ -10,12 +10,17 @@ import {
 } from '../../data/sapMockData';
 import { sampleGeneralLedgerData, GeneralLedgerItem } from '../../data/generalLedgerData';
 import { sampleCustomerLedgerData, CustomerLedgerItem } from '../../data/customerLedgerData';
+import { sampleVendorLedgerData, VendorLedgerItem } from '../../data/vendorLedgerData';
 import { API_BASE_URL } from '../../config/api';
+import { exportToExcel } from '../../utils/exportToExcel';
 import { TableToolbar, OutputHeaderButtonBoxes, ButtonBoxField, ColumnFilterBar, ColumnOption, ColumnFilterState } from '../CommonUI/CommonUI';
 import {
   BookOpen,
   ArrowLeft,
+  ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Filter,
   CheckCircle2,
   Users,
@@ -28,8 +33,123 @@ import {
   Info,
   AlertCircle,
   Loader2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
+
+interface ReportPaginationBarProps {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  loading: boolean;
+  onPageChange: (page: number) => void;
+}
+
+const ReportPaginationBar: React.FC<ReportPaginationBarProps> = ({
+  currentPage,
+  totalPages,
+  totalCount,
+  loading,
+  onPageChange
+}) => {
+  const isFirst = currentPage <= 1;
+  const isLast = currentPage >= totalPages || totalPages === 0;
+
+  const getVisiblePages = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const visiblePages = getVisiblePages();
+
+  return (
+    <div className="bg-white border border-[#D9DEE6] rounded-lg px-4 py-2 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs shadow-xs font-sans select-none">
+      <div className="flex flex-wrap items-center gap-2 text-slate-600">
+        <span className="font-medium">
+          Page <strong className="text-[#273B5E] font-mono">{currentPage}</strong> of <strong className="text-[#273B5E] font-mono">{totalPages || 1}</strong>
+        </span>
+        <span className="text-slate-300">|</span>
+        <span className="text-slate-500 font-mono text-[11px]">
+          Total <strong className="text-slate-800">{totalCount.toLocaleString()}</strong> records
+        </span>
+        <span className="text-slate-300">|</span>
+        <span className="bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
+          100 records / page
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={isFirst || loading}
+          className="p-1.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="First Page"
+        >
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={isFirst || loading}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-[#273B5E] hover:text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+          title="Previous Page"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          <span>Previous</span>
+        </button>
+
+        <div className="flex items-center gap-1 mx-1">
+          {visiblePages.map(p => (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              disabled={loading}
+              className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition-all ${
+                p === currentPage
+                  ? 'bg-[#273B5E] text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={isLast || loading}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-[#273B5E] hover:text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+          title="Next Page"
+        >
+          <span>Next</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={isLast || loading}
+          className="p-1.5 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Last Page"
+        >
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+
+        {loading && (
+          <Loader2 className="w-4 h-4 text-[#273B5E] animate-spin ml-1 shrink-0" />
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface LedgerReportingModuleProps {
   activeScreen: Screen;
@@ -58,6 +178,10 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   const [glOption, setGlOption] = useState<'all_entries' | 'open_items' | 'cleared_items'>('all_entries');
   const [apiGlData, setApiGlData] = useState<GeneralLedgerItem[]>(sampleGeneralLedgerData);
   const [loadingGl, setLoadingGl] = useState(false);
+  const [glPage, setGlPage] = useState<number>(1);
+  const [glPaginationInfo, setGlPaginationInfo] = useState<{ page: number; page_size: number; total_count: number; total_pages: number }>({ page: 1, page_size: 100, total_count: sampleGeneralLedgerData.length, total_pages: Math.ceil(sampleGeneralLedgerData.length / 100) || 1 });
+  const [glGrandTotal, setGlGrandTotal] = useState<{ credit_total: number; debit_total: number; net: number } | null>(null);
+  const [glAccountTotalsMap, setGlAccountTotalsMap] = useState<Record<string, { credit_total: number; debit_total: number; net: number }>>({});
 
   // Customer Ledger Form Specific States
   const [fromCustNum, setFromCustNum] = useState('');
@@ -67,6 +191,21 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   const [custOption, setCustOption] = useState<'all_entries' | 'open_items' | 'cleared_items'>('all_entries');
   const [apiCustData, setApiCustData] = useState<CustomerLedgerItem[]>(sampleCustomerLedgerData);
   const [loadingCust, setLoadingCust] = useState(false);
+  const [custPage, setCustPage] = useState<number>(1);
+  const [custPaginationInfo, setCustPaginationInfo] = useState<{ page: number; page_size: number; total_count: number; total_pages: number }>({ page: 1, page_size: 100, total_count: sampleCustomerLedgerData.length, total_pages: Math.ceil(sampleCustomerLedgerData.length / 100) || 1 });
+  const [custGrandTotal, setCustGrandTotal] = useState<{ credit_total: number; debit_total: number; net: number } | null>(null);
+
+  // Vendor Ledger Form Specific States
+  const [fromVendorNum, setFromVendorNum] = useState('');
+  const [toVendorNum, setToVendorNum] = useState('');
+  const [vendorFromDate, setVendorFromDate] = useState('2024-04-01');
+  const [vendorToDate, setVendorToDate] = useState('2024-04-30');
+  const [vendorOption, setVendorOption] = useState<'all_entries' | 'open_items' | 'cleared_items'>('all_entries');
+  const [apiVendorData, setApiVendorData] = useState<VendorLedgerItem[]>(sampleVendorLedgerData);
+  const [loadingVendor, setLoadingVendor] = useState(false);
+  const [vendorPage, setVendorPage] = useState<number>(1);
+  const [vendorPaginationInfo, setVendorPaginationInfo] = useState<{ page: number; page_size: number; total_count: number; total_pages: number }>({ page: 1, page_size: 100, total_count: sampleVendorLedgerData.length, total_pages: Math.ceil(sampleVendorLedgerData.length / 100) || 1 });
+  const [vendorGrandTotal, setVendorGrandTotal] = useState<{ credit_total: number; debit_total: number; net: number } | null>(null);
 
   const [customerCode, setCustomerCode] = useState('0000100201');
   const [vendorCode, setVendorCode] = useState('0000200501');
@@ -89,6 +228,8 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     { columnKey: '', value: '' },
     { columnKey: '', value: '' }
   ]);
+  const [sortColumn, setSortColumn] = useState<string>('posting_date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleColumnFilterChange = (index: number, columnKey: string, value: string) => {
     setColumnFilters(prev => {
@@ -107,7 +248,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   };
 
   // Handler for Fetching General Ledger API / Local Data
-  const handleFetchGeneralLedger = async () => {
+  const handleFetchGeneralLedger = async (targetPage: number = 1) => {
     if (!companyCode.trim()) {
       triggerToast('Company Code is mandatory.', 'warning');
       return;
@@ -122,10 +263,11 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     }
 
     setLoadingGl(true);
+    setGlPage(targetPage);
 
     try {
       const baseUrl = API_BASE_URL;
-      let url = `${baseUrl}/api/ledger-reporting/general-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(glOption)}`;
+      let url = `${baseUrl}/api/ledger-reporting/general-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(glOption)}&page=${targetPage}&page_size=100`;
       if (fromGlAccount.trim()) url += `&from_gl_acc_num=${encodeURIComponent(fromGlAccount.trim())}`;
       if (toGlAccount.trim()) url += `&to_gl_acc_num=${encodeURIComponent(toGlAccount.trim())}`;
       if (glOption !== 'open_items' && fromDate.trim()) url += `&from_date=${encodeURIComponent(fromDate.trim())}`;
@@ -139,20 +281,56 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       if (res.ok) {
         const json = await res.json();
         let items: GeneralLedgerItem[] = [];
-        if (json.data && Array.isArray(json.data.data)) {
-          items = json.data.data;
-        } else if (json.data && Array.isArray(json.data)) {
-          items = json.data;
+        let pag = { page: targetPage, page_size: 100, total_count: 0, total_pages: 1 };
+        if (json.data) {
+          if (Array.isArray(json.data.data)) {
+            items = json.data.data;
+          } else if (Array.isArray(json.data)) {
+            items = json.data;
+          }
+          if (json.data.grand_total) {
+            setGlGrandTotal(json.data.grand_total);
+          } else {
+            setGlGrandTotal(null);
+          }
+          if (Array.isArray(json.data.gl_account_totals)) {
+            const map: Record<string, { credit_total: number; debit_total: number; net: number }> = {};
+            json.data.gl_account_totals.forEach((tot: any) => {
+              if (tot.gl_account) {
+                map[String(tot.gl_account)] = {
+                  credit_total: Number(tot.credit_total || 0),
+                  debit_total: Number(tot.debit_total || 0),
+                  net: Number(tot.net || 0),
+                };
+              }
+            });
+            setGlAccountTotalsMap(map);
+          } else {
+            setGlAccountTotalsMap({});
+          }
+          if (json.data.pagination) {
+            pag = json.data.pagination;
+          } else {
+            pag.total_count = items.length;
+            pag.total_pages = Math.ceil(items.length / 100) || 1;
+          }
         } else if (Array.isArray(json)) {
           items = json;
+          setGlGrandTotal(null);
+          setGlAccountTotalsMap({});
+          pag.total_count = items.length;
+          pag.total_pages = Math.ceil(items.length / 100) || 1;
         }
         setApiGlData(items);
-        triggerToast(`General Ledger data fetched successfully (${items.length} records).`, 'success');
+        setGlPaginationInfo(pag);
+        triggerToast(`General Ledger data fetched successfully (${items.length} records, Page ${pag.page} of ${pag.total_pages}).`, 'success');
       } else {
         throw new Error(`API returned HTTP ${res.status}`);
       }
     } catch (err) {
       console.warn('Backend API connection fallback to local filtering:', err);
+      setGlGrandTotal(null);
+      setGlAccountTotalsMap({});
 
       // Perform fallback local shortlist filter matching user input parameters
       let filtered = sampleGeneralLedgerData.filter((item) => {
@@ -182,18 +360,72 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
         return true;
       });
 
-      setApiGlData(filtered);
-      triggerToast(`Loaded shortlisted General Ledger data (${filtered.length} entries).`, 'info');
+      const total_count = filtered.length;
+      const total_pages = Math.ceil(total_count / 100) || 1;
+      const startIndex = (targetPage - 1) * 100;
+      const pageItems = filtered.slice(startIndex, startIndex + 100);
+
+      setApiGlData(pageItems);
+      setGlPaginationInfo({ page: targetPage, page_size: 100, total_count, total_pages });
+      triggerToast(`Loaded shortlisted General Ledger data (${pageItems.length} entries on page ${targetPage}).`, 'info');
     } finally {
       setLoadingGl(false);
       onNavigate('GL_LEDGER_REP');
     }
   };
+  // Sorting General Ledger data
+  const sortedGLData = useMemo(() => {
+    return [...apiGlData].sort((a, b) => {
+      const aValue = (a as any)[sortColumn];
+      const bValue = (b as any)[sortColumn];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      let comparison = 0;
+
+      // Amount sorting
+      if (
+        sortColumn === 'amount_lc' ||
+        sortColumn === 'amount1'
+      ) {
+        comparison = Number(aValue || 0) - Number(bValue || 0);
+      }
+
+      // Date sorting
+      else if (
+        sortColumn === 'posting_date' ||
+        sortColumn === 'clgentdate'
+      ) {
+        comparison =
+          new Date(String(aValue)).getTime() -
+          new Date(String(bValue)).getTime();
+      }
+
+      // Text / number sorting
+      else {
+        comparison = String(aValue).localeCompare(
+          String(bValue),
+          undefined,
+          {
+            numeric: true,
+            sensitivity: 'base',
+          }
+        );
+      }
+
+      return sortDirection === 'asc'
+        ? comparison
+        : -comparison;
+    });
+  }, [apiGlData, sortColumn, sortDirection]);
 
   // Grouping of API / Filtered General Ledger entries by G/L account for output table
   const groupedGLData = useMemo(() => {
-    const map: Record<string, GeneralLedgerItem[]> = {};
-    apiGlData.forEach((item) => {
+    const groups: { key: string; items: GeneralLedgerItem[] }[] = [];
+    const map = new Map<string, GeneralLedgerItem[]>();
+
+    sortedGLData.forEach((item) => {
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const match =
@@ -219,19 +451,37 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       }
 
       const acct = item.g_l_acct2 || 'General Account';
-      if (!map[acct]) map[acct] = [];
-      map[acct].push(item);
+      if (!map.has(acct)) {
+        const groupItems: GeneralLedgerItem[] = [];
+        map.set(acct, groupItems);
+        groups.push({ key: acct, items: groupItems });
+      }
+      map.get(acct)!.push(item);
     });
-    return map;
-  }, [apiGlData, searchTerm, columnFilters]);
+
+    return groups;
+  }, [sortedGLData, searchTerm, columnFilters]);
+
+  // Shortlisted GL Items
+  const shortlistedGLItems = useMemo(() => {
+    return groupedGLData.flatMap(g => g.items);
+  }, [groupedGLData]);
 
   // Overall grand total amount calculation
   const grandTotalAmount = useMemo(() => {
-    return apiGlData.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
-  }, [apiGlData]);
+    return shortlistedGLItems.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
+  }, [shortlistedGLItems]);
+
+  // Overall GL summary calculations (Debit, Credit, Net)
+  const glSummary = useMemo(() => {
+    const debit = shortlistedGLItems.reduce((acc, item) => acc + (item.d_c_indic === 'S' ? (item.amount_lc || 0) : 0), 0);
+    const credit = shortlistedGLItems.reduce((acc, item) => acc + (item.d_c_indic === 'H' ? (item.amount_lc || 0) : 0), 0);
+    const net = debit - credit;
+    return { debit, credit, net };
+  }, [shortlistedGLItems]);
 
   // Handler for Fetching Customer Ledger API / Local Data
-  const handleFetchCustomerLedger = async () => {
+  const handleFetchCustomerLedger = async (targetPage: number = 1) => {
     if (!companyCode.trim()) {
       triggerToast('Company Code is mandatory.', 'warning');
       return;
@@ -246,10 +496,11 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     }
 
     setLoadingCust(true);
+    setCustPage(targetPage);
 
     try {
       const baseUrl = API_BASE_URL;
-      let url = `${baseUrl}/api/ledger-reporting/customer-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(custOption)}`;
+      let url = `${baseUrl}/api/ledger-reporting/customer-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(custOption)}&page=${targetPage}&page_size=100`;
       if (fromCustNum.trim()) url += `&from_cust_num=${encodeURIComponent(fromCustNum.trim())}`;
       if (toCustNum.trim()) url += `&to_cust_num=${encodeURIComponent(toCustNum.trim())}`;
       if (custOption !== 'open_items' && custFromDate.trim()) url += `&from_date=${encodeURIComponent(custFromDate.trim())}`;
@@ -263,20 +514,39 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       if (res.ok) {
         const json = await res.json();
         let items: CustomerLedgerItem[] = [];
-        if (json.data && Array.isArray(json.data.data)) {
-          items = json.data.data;
-        } else if (json.data && Array.isArray(json.data)) {
-          items = json.data;
+        let pag = { page: targetPage, page_size: 100, total_count: 0, total_pages: 1 };
+        if (json.data) {
+          if (Array.isArray(json.data.data)) {
+            items = json.data.data;
+          } else if (Array.isArray(json.data)) {
+            items = json.data;
+          }
+          if (json.data.grand_total) {
+            setCustGrandTotal(json.data.grand_total);
+          } else {
+            setCustGrandTotal(null);
+          }
+          if (json.data.pagination) {
+            pag = json.data.pagination;
+          } else {
+            pag.total_count = items.length;
+            pag.total_pages = Math.ceil(items.length / 100) || 1;
+          }
         } else if (Array.isArray(json)) {
           items = json;
+          setCustGrandTotal(null);
+          pag.total_count = items.length;
+          pag.total_pages = Math.ceil(items.length / 100) || 1;
         }
         setApiCustData(items);
-        triggerToast(`Customer Ledger data fetched successfully (${items.length} records).`, 'success');
+        setCustPaginationInfo(pag);
+        triggerToast(`Customer Ledger data fetched successfully (${items.length} records, Page ${pag.page} of ${pag.total_pages}).`, 'success');
       } else {
         throw new Error(`API returned HTTP ${res.status}`);
       }
     } catch (err) {
       console.warn('Backend API connection fallback to local filtering:', err);
+      setCustGrandTotal(null);
 
       const isNumFrom = Boolean(fromCustNum.trim()) && !isNaN(Number(fromCustNum));
       const isNumTo = Boolean(toCustNum.trim()) && !isNaN(Number(toCustNum));
@@ -317,18 +587,64 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
         return true;
       });
 
-      setApiCustData(filtered);
-      triggerToast(`Loaded shortlisted Customer Ledger data (${filtered.length} entries).`, 'info');
+      const total_count = filtered.length;
+      const total_pages = Math.ceil(total_count / 100) || 1;
+      const startIndex = (targetPage - 1) * 100;
+      const pageItems = filtered.slice(startIndex, startIndex + 100);
+
+      setApiCustData(pageItems);
+      setCustPaginationInfo({ page: targetPage, page_size: 100, total_count, total_pages });
+      triggerToast(`Loaded shortlisted Customer Ledger data (${pageItems.length} entries on page ${targetPage}).`, 'info');
     } finally {
       setLoadingCust(false);
       onNavigate('CUSTOMER_LEDGER_REP');
     }
   };
 
+  // Sorting Customer Ledger data
+  const sortedCustData = useMemo(() => {
+    return [...apiCustData].sort((a, b) => {
+      const aValue = (a as any)[sortColumn];
+      const bValue = (b as any)[sortColumn];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      let comparison = 0;
+
+      if (
+        sortColumn === 'amount_lc' ||
+        sortColumn === 'amount1'
+      ) {
+        comparison = Number(aValue || 0) - Number(bValue || 0);
+      } else if (
+        sortColumn === 'posting_date' ||
+        sortColumn === 'clgentdate'
+      ) {
+        comparison =
+          new Date(String(aValue)).getTime() -
+          new Date(String(bValue)).getTime();
+      } else {
+        comparison = String(aValue).localeCompare(
+          String(bValue),
+          undefined,
+          {
+            numeric: true,
+            sensitivity: 'base',
+          }
+        );
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [apiCustData, sortColumn, sortDirection]);
+
   // Grouping of API / Filtered Customer Ledger entries by customer for output table
   const groupedCustData = useMemo(() => {
-    const map: Record<string, CustomerLedgerItem[]> = {};
-    apiCustData.forEach((item) => {
+    const groups: { key: string; items: CustomerLedgerItem[] }[] = [];
+    const map = new Map<string, CustomerLedgerItem[]>();
+
+    sortedCustData.forEach((item) => {
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const match =
@@ -353,16 +669,252 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
       }
 
       const custKey = item.customer || 'Unassigned Customer';
-      if (!map[custKey]) map[custKey] = [];
-      map[custKey].push(item);
+      if (!map.has(custKey)) {
+        const groupItems: CustomerLedgerItem[] = [];
+        map.set(custKey, groupItems);
+        groups.push({ key: custKey, items: groupItems });
+      }
+      map.get(custKey)!.push(item);
     });
-    return map;
-  }, [apiCustData, searchTerm, columnFilters]);
+
+    return groups;
+  }, [sortedCustData, searchTerm, columnFilters]);
+
+  // Shortlisted Customer Items
+  const shortlistedCustItems = useMemo(() => {
+    return groupedCustData.flatMap(g => g.items);
+  }, [groupedCustData]);
 
   // Overall grand total amount calculation for Customer Ledger
   const grandTotalCustAmount = useMemo(() => {
-    return apiCustData.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
-  }, [apiCustData]);
+    return shortlistedCustItems.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
+  }, [shortlistedCustItems]);
+
+  // Overall Customer summary calculations (Debit, Credit, Net)
+  const custSummary = useMemo(() => {
+    const debit = shortlistedCustItems.reduce((acc, item) => acc + (item.d_c_indic === 'S' ? (item.amount_lc || 0) : 0), 0);
+    const credit = shortlistedCustItems.reduce((acc, item) => acc + (item.d_c_indic === 'H' ? (item.amount_lc || 0) : 0), 0);
+    const net = debit - credit;
+    return { debit, credit, net };
+  }, [shortlistedCustItems]);
+
+  // Handler for Fetching Vendor Ledger API / Local Data
+  const handleFetchVendorLedger = async (targetPage: number = 1) => {
+    if (!companyCode.trim()) {
+      triggerToast('Company Code is mandatory.', 'warning');
+      return;
+    }
+    if (!vendorToDate.trim()) {
+      triggerToast('To Date is mandatory.', 'warning');
+      return;
+    }
+    if (vendorOption !== 'open_items' && !vendorFromDate.trim()) {
+      triggerToast('From Date is mandatory for all/cleared entries selection.', 'warning');
+      return;
+    }
+
+    setLoadingVendor(true);
+    setVendorPage(targetPage);
+
+    try {
+      const baseUrl = API_BASE_URL;
+      let url = `${baseUrl}/api/ledger-reporting/vendor-ledger?company_code=${encodeURIComponent(companyCode.trim())}&option=${encodeURIComponent(vendorOption)}&page=${targetPage}&page_size=100`;
+      if (fromVendorNum.trim()) url += `&from_vendor_num=${encodeURIComponent(fromVendorNum.trim())}`;
+      if (toVendorNum.trim()) url += `&to_vendor_num=${encodeURIComponent(toVendorNum.trim())}`;
+      if (vendorOption !== 'open_items' && vendorFromDate.trim()) url += `&from_date=${encodeURIComponent(vendorFromDate.trim())}`;
+      if (vendorToDate.trim()) url += `&to_date=${encodeURIComponent(vendorToDate.trim())}`;
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sap_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Token ${token}`;
+
+      const res = await fetch(url, { method: 'GET', headers });
+      if (res.ok) {
+        const json = await res.json();
+        let items: VendorLedgerItem[] = [];
+        let pag = { page: targetPage, page_size: 100, total_count: 0, total_pages: 1 };
+        if (json.data) {
+          if (Array.isArray(json.data.data)) {
+            items = json.data.data;
+          } else if (Array.isArray(json.data)) {
+            items = json.data;
+          }
+          if (json.data.grand_total) {
+            setVendorGrandTotal(json.data.grand_total);
+          } else {
+            setVendorGrandTotal(null);
+          }
+          if (json.data.pagination) {
+            pag = json.data.pagination;
+          } else {
+            pag.total_count = items.length;
+            pag.total_pages = Math.ceil(items.length / 100) || 1;
+          }
+        } else if (Array.isArray(json)) {
+          items = json;
+          setVendorGrandTotal(null);
+          pag.total_count = items.length;
+          pag.total_pages = Math.ceil(items.length / 100) || 1;
+        }
+        setApiVendorData(items);
+        setVendorPaginationInfo(pag);
+        triggerToast(`Vendor Ledger data fetched successfully (${items.length} records, Page ${pag.page} of ${pag.total_pages}).`, 'success');
+      } else {
+        throw new Error(`API returned HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('Backend API connection fallback to local filtering:', err);
+      setVendorGrandTotal(null);
+
+      const isNumFrom = Boolean(fromVendorNum.trim()) && !isNaN(Number(fromVendorNum));
+      const isNumTo = Boolean(toVendorNum.trim()) && !isNaN(Number(toVendorNum));
+
+      let filtered = sampleVendorLedgerData.filter((item) => {
+        if (companyCode.trim() && item.cocode !== companyCode.trim()) return false;
+
+        if (fromVendorNum.trim()) {
+          const isNumVend = Boolean(item.vendor) && !isNaN(Number(item.vendor));
+          if (isNumFrom && isNumVend) {
+            if (Number(item.vendor) < Number(fromVendorNum)) return false;
+          } else if (item.vendor < fromVendorNum.trim()) {
+            return false;
+          }
+        }
+
+        if (toVendorNum.trim()) {
+          const isNumVend = Boolean(item.vendor) && !isNaN(Number(item.vendor));
+          if (isNumTo && isNumVend) {
+            if (Number(item.vendor) > Number(toVendorNum)) return false;
+          } else if (item.vendor > toVendorNum.trim()) {
+            return false;
+          }
+        }
+
+        if (vendorOption === 'open_items') {
+          if (item.clgentdate) return false;
+          if (vendorToDate.trim() && item.posting_date > vendorToDate.trim()) return false;
+        } else if (vendorOption === 'cleared_items') {
+          if (!item.clgentdate) return false;
+          if (vendorFromDate.trim() && item.posting_date < vendorFromDate.trim()) return false;
+          if (vendorToDate.trim() && item.posting_date > vendorToDate.trim()) return false;
+        } else {
+          if (vendorFromDate.trim() && item.posting_date < vendorFromDate.trim()) return false;
+          if (vendorToDate.trim() && item.posting_date > vendorToDate.trim()) return false;
+        }
+
+        return true;
+      });
+
+      const total_count = filtered.length;
+      const total_pages = Math.ceil(total_count / 100) || 1;
+      const startIndex = (targetPage - 1) * 100;
+      const pageItems = filtered.slice(startIndex, startIndex + 100);
+
+      setApiVendorData(pageItems);
+      setVendorPaginationInfo({ page: targetPage, page_size: 100, total_count, total_pages });
+      triggerToast(`Loaded shortlisted Vendor Ledger data (${pageItems.length} entries on page ${targetPage}).`, 'info');
+    } finally {
+      setLoadingVendor(false);
+      onNavigate('VENDOR_LEDGER_REP');
+    }
+  };
+
+  // Sorting Vendor Ledger data
+  const sortedVendorData = useMemo(() => {
+    return [...apiVendorData].sort((a, b) => {
+      const aValue = (a as any)[sortColumn];
+      const bValue = (b as any)[sortColumn];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      let comparison = 0;
+
+      if (
+        sortColumn === 'amount_lc' ||
+        sortColumn === 'amount1'
+      ) {
+        comparison = Number(aValue || 0) - Number(bValue || 0);
+      } else if (
+        sortColumn === 'posting_date' ||
+        sortColumn === 'clgentdate'
+      ) {
+        comparison =
+          new Date(String(aValue)).getTime() -
+          new Date(String(bValue)).getTime();
+      } else {
+        comparison = String(aValue).localeCompare(
+          String(bValue),
+          undefined,
+          {
+            numeric: true,
+            sensitivity: 'base',
+          }
+        );
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [apiVendorData, sortColumn, sortDirection]);
+
+  // Grouping of API / Filtered Vendor Ledger entries by vendor for output table
+  const groupedVendorData = useMemo(() => {
+    const groups: { key: string; items: VendorLedgerItem[] }[] = [];
+    const map = new Map<string, VendorLedgerItem[]>();
+
+    sortedVendorData.forEach((item) => {
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        const match =
+          item.documentno.toLowerCase().includes(term) ||
+          item.vendor.toLowerCase().includes(term) ||
+          item.g_l_acct2.toLowerCase().includes(term) ||
+          (item.assignment && item.assignment.toLowerCase().includes(term)) ||
+          (item.reference_key && item.reference_key.toLowerCase().includes(term)) ||
+          (item.vendor_name && item.vendor_name.toLowerCase().includes(term));
+        if (!match) return;
+      }
+
+      // Dynamic 3 Key-Value Column Filters
+      for (const filter of columnFilters) {
+        if (filter.columnKey && filter.value.trim()) {
+          const filterVal = filter.value.trim().toLowerCase();
+          const itemVal = String((item as any)[filter.columnKey] ?? '').toLowerCase();
+          if (!itemVal.includes(filterVal)) {
+            return;
+          }
+        }
+      }
+
+      const vendKey = item.vendor || 'Unassigned Vendor';
+      if (!map.has(vendKey)) {
+        const groupItems: VendorLedgerItem[] = [];
+        map.set(vendKey, groupItems);
+        groups.push({ key: vendKey, items: groupItems });
+      }
+      map.get(vendKey)!.push(item);
+    });
+
+    return groups;
+  }, [sortedVendorData, searchTerm, columnFilters]);
+
+  // Shortlisted Vendor Items
+  const shortlistedVendorItems = useMemo(() => {
+    return groupedVendorData.flatMap(g => g.items);
+  }, [groupedVendorData]);
+
+  // Overall grand total amount calculation for Vendor Ledger
+  const grandTotalVendorAmount = useMemo(() => {
+    return shortlistedVendorItems.reduce((acc, item) => acc + (item.amount_lc || 0), 0);
+  }, [shortlistedVendorItems]);
+
+  // Overall Vendor summary calculations (Debit, Credit, Net)
+  const vendorSummary = useMemo(() => {
+    const debit = shortlistedVendorItems.reduce((acc, item) => acc + (item.d_c_indic === 'S' ? (item.amount_lc || 0) : 0), 0);
+    const credit = shortlistedVendorItems.reduce((acc, item) => acc + (item.d_c_indic === 'H' ? (item.amount_lc || 0) : 0), 0);
+    const net = debit - credit;
+    return { debit, credit, net };
+  }, [shortlistedVendorItems]);
 
   // Customer Master & Ledger
   const activeCustomer = useMemo(() => {
@@ -402,6 +954,179 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
     entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     entry.documentNum.includes(searchTerm)
   );
+
+  // ============================================================================
+  // EXCEL DOWNLOAD HANDLERS (FRONTEND CLIENT-SIDE EXPORT)
+  // ============================================================================
+  const handleExportGLExcel = () => {
+    const exportData = sortedGLData.map(item => ({
+      documentno: item.documentno,
+      doc_type: item.doc_type || 'SA',
+      g_l_acct2: item.g_l_acct2,
+      gl_description: item.gl_description || '',
+      cocode: item.cocode,
+      assignment: item.assignment || '',
+      posting_date: item.posting_date || '',
+      clgentdate: item.clgentdate || 'Open Item',
+      postkey: item.postkey || '',
+      d_c_indic: item.d_c_indic || '',
+      amount_lc: item.amount_lc || 0,
+      amount1: item.amount1 !== undefined && item.amount1 !== null ? item.amount1 : '',
+      reference_key: item.reference_key || '',
+      customer: item.customer || '',
+      vendor: item.vendor || '',
+      material: item.material || '',
+      profit_ctr: item.profit_ctr || '',
+      cost_ctr: item.cost_ctr || ''
+    }));
+
+    const columnMap = {
+      documentno: 'Document No',
+      doc_type: 'Doc Type',
+      g_l_acct2: 'G/L Account',
+      gl_description: 'G/L Description',
+      cocode: 'Company Code',
+      assignment: 'Assignment',
+      posting_date: 'Posting Date',
+      clgentdate: 'Clearing Date',
+      postkey: 'Posting Key',
+      d_c_indic: 'D/C',
+      amount_lc: 'Amount in LC (₹)',
+      amount1: 'Amount 1',
+      reference_key: 'Reference Key',
+      customer: 'Customer',
+      vendor: 'Vendor',
+      material: 'Material',
+      profit_ctr: 'Profit Center',
+      cost_ctr: 'Cost Center'
+    };
+
+    exportToExcel(exportData, `General_Ledger_Report_${companyCode}`, 'General Ledger', columnMap);
+    triggerToast(`Exported ${exportData.length} General Ledger records to Excel successfully!`, 'success');
+  };
+
+  const handleExportCustExcel = () => {
+    const exportData = sortedCustData.map(item => ({
+      documentno: item.documentno,
+      doc_type: item.doc_type || 'SA',
+      customer: item.customer,
+      customer_name: item.customer_name || '',
+      g_l_acct2: item.g_l_acct2,
+      cocode: item.cocode,
+      assignment: item.assignment || '',
+      posting_date: item.posting_date || '',
+      clgentdate: item.clgentdate || 'Open Item',
+      postkey: item.postkey || '',
+      d_c_indic: item.d_c_indic || '',
+      amount_lc: item.amount_lc || 0,
+      amount1: item.amount1 !== undefined && item.amount1 !== null ? item.amount1 : '',
+      reference_key: item.reference_key || '',
+      vendor: item.vendor || '',
+      material: item.material || '',
+      profit_ctr: item.profit_ctr || '',
+      cost_ctr: item.cost_ctr || ''
+    }));
+
+    const columnMap = {
+      documentno: 'Document No',
+      doc_type: 'Doc Type',
+      customer: 'Customer No',
+      customer_name: 'Customer Name',
+      g_l_acct2: 'G/L Account',
+      cocode: 'Company Code',
+      assignment: 'Assignment',
+      posting_date: 'Posting Date',
+      clgentdate: 'Clearing Date',
+      postkey: 'Posting Key',
+      d_c_indic: 'D/C',
+      amount_lc: 'Amount in LC (₹)',
+      amount1: 'Amount 1',
+      reference_key: 'Reference Key',
+      vendor: 'Vendor',
+      material: 'Material',
+      profit_ctr: 'Profit Center',
+      cost_ctr: 'Cost Center'
+    };
+
+    exportToExcel(exportData, `Customer_Ledger_Report_${companyCode}`, 'Customer Ledger', columnMap);
+    triggerToast(`Exported ${exportData.length} Customer Ledger records to Excel successfully!`, 'success');
+  };
+
+  const handleExportVendorExcel = () => {
+    const exportData = sortedVendorData.map(item => ({
+      documentno: item.documentno,
+      doc_type: item.doc_type || 'SA',
+      vendor: item.vendor,
+      vendor_name: item.vendor_name || '',
+      g_l_acct2: item.g_l_acct2,
+      cocode: item.cocode,
+      assignment: item.assignment || '',
+      posting_date: item.posting_date || '',
+      clgentdate: item.clgentdate || 'Open Item',
+      postkey: item.postkey || '',
+      d_c_indic: item.d_c_indic || '',
+      amount_lc: item.amount_lc || 0,
+      amount1: item.amount1 !== undefined && item.amount1 !== null ? item.amount1 : '',
+      reference_key: item.reference_key || '',
+      customer: item.customer || '',
+      material: item.material || '',
+      profit_ctr: item.profit_ctr || '',
+      cost_ctr: item.cost_ctr || ''
+    }));
+
+    const columnMap = {
+      documentno: 'Document No',
+      doc_type: 'Doc Type',
+      vendor: 'Vendor No',
+      vendor_name: 'Vendor Name',
+      g_l_acct2: 'G/L Account',
+      cocode: 'Company Code',
+      assignment: 'Assignment',
+      posting_date: 'Posting Date',
+      clgentdate: 'Clearing Date',
+      postkey: 'Posting Key',
+      d_c_indic: 'D/C',
+      amount_lc: 'Amount in LC (₹)',
+      amount1: 'Amount 1',
+      reference_key: 'Reference Key',
+      customer: 'Customer',
+      material: 'Material',
+      profit_ctr: 'Profit Center',
+      cost_ctr: 'Cost Center'
+    };
+
+    exportToExcel(exportData, `Vendor_Ledger_Report_${companyCode}`, 'Vendor Ledger', columnMap);
+    triggerToast(`Exported ${exportData.length} Vendor Ledger records to Excel successfully!`, 'success');
+  };
+
+  const handleExportStockExcel = () => {
+    const exportData = stockItems.map(item => ({
+      matCode: item.matCode,
+      name: item.name,
+      cocode: companyCode || '1900',
+      fiscalYear: fiscalYear || '2026',
+      plant: item.plant,
+      storageLoc: item.storageLoc,
+      stockQty: item.stockQty,
+      uom: item.uom,
+      val: item.val * 83
+    }));
+
+    const columnMap = {
+      matCode: 'Material Number',
+      name: 'Material Description',
+      cocode: 'Company Code',
+      fiscalYear: 'Fiscal Year',
+      plant: 'Plant Code',
+      storageLoc: 'Storage Location',
+      stockQty: 'On-Hand Quantity',
+      uom: 'Unit of Measure',
+      val: 'Simulated Valuation (₹)'
+    };
+
+    exportToExcel(exportData, `Stock_Inventory_Report_${companyCode}`, 'Stock Inventory', columnMap);
+    triggerToast(`Exported ${exportData.length} Stock items to Excel successfully!`, 'success');
+  };
 
 
   // ============================================================================
@@ -662,7 +1387,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
               <button
                 id="btn-gl-display"
                 disabled={loadingGl}
-                onClick={handleFetchGeneralLedger}
+                onClick={() => handleFetchGeneralLedger(1)}
                 className="px-5 py-1.5 bg-[#273B5E] hover:bg-[#1f2f4b] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
               >
                 {loadingGl ? (
@@ -692,6 +1417,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
     const glColumnOptions: ColumnOption[] = [
       { key: 'documentno', label: 'DocumentNo' },
+      { key: 'doc_type', label: 'DocType' },
       { key: 'g_l_acct2', label: 'G/L Acct' },
       { key: 'gl_description', label: 'GL Description' },
       { key: 'cocode', label: 'CoCode' },
@@ -712,6 +1438,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
     const glTableCols = [
       { key: 'documentno', label: 'DocumentNo', minWidth: '110px', align: 'left', render: (i: GeneralLedgerItem) => <span className="font-mono font-bold text-[#963F29]">{i.documentno}</span> },
+      { key: 'doc_type', label: 'DocType', minWidth: '70px', align: 'center', render: (i: GeneralLedgerItem) => <span className="font-mono text-slate-700 font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">{i.doc_type || 'SA'}</span> },
       { key: 'g_l_acct2', label: 'G/L Acct', minWidth: '100px', align: 'left', render: (i: GeneralLedgerItem) => <span className="font-mono text-slate-700 font-bold">{i.g_l_acct2}</span> },
       { key: 'gl_description', label: 'GL Description', minWidth: '180px', align: 'left', render: (i: GeneralLedgerItem) => <span className="font-sans font-medium text-slate-800">{i.gl_description || '-'}</span> },
       { key: 'cocode', label: 'CoCode', minWidth: '70px', align: 'center', render: (i: GeneralLedgerItem) => <span className="font-mono text-center text-slate-600">{i.cocode}</span> },
@@ -743,17 +1470,28 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           <div>
             <h2 className="text-base sm:text-lg font-sans font-bold text-[#273B5E]">G/L Account Line Item Display</h2>
             <p className="text-[11px] sm:text-xs text-slate-500 font-mono mt-0.5">
-              Company Code: <strong>{companyCode}</strong> | Option: <strong>{glOption}</strong> | Total Records: <strong>{apiGlData.length}</strong>
+              Company Code: <strong>{companyCode}</strong> | Option: <strong>{glOption}</strong> | Page: <strong>{glPage} of {glPaginationInfo.total_pages || 1}</strong> | Total Records: <strong>{glPaginationInfo.total_count}</strong>
             </p>
           </div>
-          <button
-            id="btn-gl-rep-back"
-            onClick={() => onNavigate('GL_LEDGER_SEL')}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Selection Screen</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleExportGLExcel}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] rounded-md text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Download General Ledger to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+              <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+              <span>Download Excel</span>
+            </button>
+            <button
+              id="btn-gl-rep-back"
+              onClick={() => onNavigate('GL_LEDGER_SEL')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Selection Screen</span>
+            </button>
+          </div>
         </div>
 
         {/* Dynamic 3 Key-Value Column Filters Toolbar */}
@@ -763,44 +1501,65 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           onFilterChange={handleColumnFilterChange}
           onClearAll={handleClearColumnFilters}
           title="Dynamic 3-Column Header Filters"
+          sortColumn={sortColumn}
+          onSortColumnChange={setSortColumn}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
         />
 
         {/* Display Grouped Tables per G/L Account (matching SAP GUI FBL3N layout) */}
-        {accountKeys.length === 0 ? (
+        {groupedGLData.length === 0 ? (
           <div className="bg-white rounded-lg border border-[#D9DEE6] p-8 text-center text-slate-400">
             No matching General Ledger records found for Company Code {companyCode}.
           </div>
         ) : (
-          accountKeys.map((acctKey) => {
-            const items = groupedGLData[acctKey];
-            const acctSubtotal = items.reduce((acc, i) => acc + (i.amount_lc || 0), 0);
+          groupedGLData.map((group) => {
+            const acctKey = group.key;
+            const items = group.items;
+            const backendAcctTotal = (!searchTerm.trim() && columnFilters.every(f => !f.value.trim())) ? glAccountTotalsMap[acctKey] : null;
+            const acctDebitTotal = backendAcctTotal ? backendAcctTotal.debit_total : items.reduce((acc, i) => acc + (i.d_c_indic === 'S' ? (i.amount_lc || 0) : 0), 0);
+            const acctCreditTotal = backendAcctTotal ? backendAcctTotal.credit_total : items.reduce((acc, i) => acc + (i.d_c_indic === 'H' ? (i.amount_lc || 0) : 0), 0);
+            const acctNetTotal = backendAcctTotal ? backendAcctTotal.net : acctDebitTotal - acctCreditTotal;
 
             return (
               <div key={acctKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
-                {/* SAP G/L Account Header Banner */}
-                <div className="bg-[#273B5E] text-white px-3 py-1.5 flex items-center gap-2.5 font-mono text-[11px]">
-                  <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
-                    G/L Account: {acctKey}
-                  </span>
-                  {items[0]?.gl_description && (
-                    <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
-                      G/L Description: {items[0].gl_description}
+                {/* SAP G/L Account Header Banner with Net, Credit, Debit Totals */}
+                <div className="bg-[#273B5E] text-white px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-[11px]">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
+                      G/L Account: {acctKey}
                     </span>
-                  )}
+                    {items[0]?.gl_description && (
+                      <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
+                        G/L Description: {items[0].gl_description}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded font-medium">
+                      Debit: <strong className="text-white">₹{acctDebitTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-rose-950/80 border border-rose-700/60 text-rose-300 px-2 py-0.5 rounded font-medium">
+                      Credit: <strong className="text-white">₹{acctCreditTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-0.5 rounded font-bold">
+                      Net: <strong className="text-amber-200">₹{acctNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap font-sans">
-                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold">
+                <div className="max-h-[60vh] overflow-auto border-t border-slate-200">
+                  <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap font-sans relative">
+                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold sticky top-0 z-10 shadow-sm">
                       <tr>
-                        <th className="py-1.5 px-2 text-center min-w-[40px]">St</th>
+                        <th className="py-2 px-2 text-center min-w-[40px] sticky top-0 bg-slate-100 z-10">St</th>
                         {orderedGlCols.map((col) => {
                           const isFiltered = selectedGlKeys.includes(col.key);
                           return (
                             <th
                               key={col.key}
                               style={{ minWidth: col.minWidth }}
-                              className={`py-1.5 px-2 font-mono ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'bg-amber-200/80 text-[#963F29] font-black border-b-2 border-[#963F29]' : ''}`}
+                              className={`py-2 px-2 font-mono sticky top-0 z-10 ${isFiltered ? 'bg-amber-200 text-[#963F29]' : 'bg-slate-100'} ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'font-black border-b-2 border-[#963F29]' : ''}`}
                             >
                               {col.label} {isFiltered && '★'}
                             </th>
@@ -837,7 +1596,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                       {/* Subtotal row */}
                       <tr className="bg-[#fef9c3] font-mono font-bold text-slate-900 border-t-2 border-slate-300">
                         <td colSpan={orderedGlCols.length + 1} className="py-1.5 px-2 text-right text-slate-800 text-[11px]">
-                          * Account {acctKey} Subtotal ({items.length} items): <span className="text-[#963F29] font-black ml-2">₹{acctSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          * Account {acctKey} Subtotal ({items.length} items): <span className="text-[#963F29] font-black ml-2">₹{acctNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </td>
                       </tr>
                     </tbody>
@@ -848,18 +1607,32 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           })
         )}
 
+        {/* Bottom Pagination Bar */}
+        <ReportPaginationBar
+          currentPage={glPage}
+          totalPages={glPaginationInfo.total_pages}
+          totalCount={glPaginationInfo.total_count}
+          loading={loadingGl}
+          onPageChange={handleFetchGeneralLedger}
+        />
+
         {/* Grand Total Footer Box */}
-        <div className="bg-[#273B5E] px-4 py-2.5 rounded-lg shadow-sm flex items-center justify-between font-mono text-xs border border-slate-700/80">
-          <div className="space-y-0.5">
+        <div className="bg-[#273B5E] px-4 py-2.5 rounded-lg shadow-sm flex flex-col sm:flex-row items-center justify-between font-mono text-xs border border-slate-700/80 gap-3">
+          <div className="space-y-0.5 text-center sm:text-left">
             <span className="font-sans block text-[11px] uppercase tracking-wider font-bold text-slate-300">TOTAL GRAND ACCUMULATED BALANCE</span>
             <span className="font-bold text-[12px] block text-white">
-              Shortlisted Result Count: <span className="font-bold text-amber-300 ml-1">{apiGlData.length} records</span>
+              Total Records: <span className="font-bold text-amber-300 ml-1">{glPaginationInfo.total_count} records</span>
             </span>
           </div>
-          <div className="text-right space-y-0.5">
-            <span className="text-[10px] block font-sans uppercase font-medium text-slate-400">Currency INR</span>
-            <span className="text-sm font-bold block text-emerald-400" style={{ color: '#34D399', fontSize: '14px' }}>
-              ₹{grandTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
+            <span className="bg-emerald-950/90 border border-emerald-600/80 text-emerald-300 px-3 py-1 rounded font-medium shadow-sm">
+              Debit: <strong className="text-white ml-1">₹{(glGrandTotal ? glGrandTotal.debit_total : glSummary.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-rose-950/90 border border-rose-600/80 text-rose-300 px-3 py-1 rounded font-medium shadow-sm">
+              Credit: <strong className="text-white ml-1">₹{(glGrandTotal ? glGrandTotal.credit_total : glSummary.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-amber-950/90 border border-amber-500/80 text-amber-300 px-3 py-1 rounded font-bold shadow-sm">
+              Net: <strong className="text-amber-200 ml-1">₹{(glGrandTotal ? glGrandTotal.net : glSummary.net).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
             </span>
           </div>
         </div>
@@ -1062,7 +1835,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
               <button
                 id="btn-cl-display"
                 disabled={loadingCust}
-                onClick={handleFetchCustomerLedger}
+                onClick={() => handleFetchCustomerLedger(1)}
                 className="px-5 py-1.5 bg-[#273B5E] hover:bg-[#1f2f4b] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
               >
                 {loadingCust ? (
@@ -1092,6 +1865,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
     const custColumnOptions: ColumnOption[] = [
       { key: 'documentno', label: 'DocumentNo' },
+      { key: 'doc_type', label: 'DocType' },
       { key: 'customer', label: 'Customer' },
       { key: 'g_l_acct2', label: 'G/L Acct' },
       { key: 'cocode', label: 'CoCode' },
@@ -1111,6 +1885,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
 
     const custTableCols = [
       { key: 'documentno', label: 'DocumentNo', minWidth: '110px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono font-bold text-[#963F29]">{i.documentno}</span> },
+      { key: 'doc_type', label: 'DocType', minWidth: '70px', align: 'center', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700 font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">{i.doc_type || 'SA'}</span> },
       { key: 'customer', label: 'Customer', minWidth: '100px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700 font-bold">{i.customer}</span> },
       { key: 'g_l_acct2', label: 'G/L Acct', minWidth: '100px', align: 'left', render: (i: CustomerLedgerItem) => <span className="font-mono text-slate-700">{i.g_l_acct2}</span> },
       { key: 'cocode', label: 'CoCode', minWidth: '70px', align: 'center', render: (i: CustomerLedgerItem) => <span className="font-mono text-center text-slate-600">{i.cocode}</span> },
@@ -1141,17 +1916,28 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           <div>
             <h2 className="text-base sm:text-lg font-sans font-bold text-[#273B5E]">Customer Line Item Display</h2>
             <p className="text-[11px] sm:text-xs text-slate-500 font-mono mt-0.5">
-              Company Code: <strong>{companyCode}</strong> | Option: <strong>{custOption}</strong> | Total Records: <strong>{apiCustData.length}</strong>
+              Company Code: <strong>{companyCode}</strong> | Option: <strong>{custOption}</strong> | Page: <strong>{custPage} of {custPaginationInfo.total_pages || 1}</strong> | Total Records: <strong>{custPaginationInfo.total_count}</strong>
             </p>
           </div>
-          <button
-            id="btn-cl-rep-back"
-            onClick={() => onNavigate('CUSTOMER_LEDGER_SEL')}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Selection Screen</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleExportCustExcel}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] rounded-md text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Download Customer Ledger to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+              <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+              <span>Download Excel</span>
+            </button>
+            <button
+              id="btn-cl-rep-back"
+              onClick={() => onNavigate('CUSTOMER_LEDGER_SEL')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Selection Screen</span>
+            </button>
+          </div>
         </div>
 
         {/* Dynamic 3 Key-Value Column Filters Toolbar */}
@@ -1161,46 +1947,64 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           onFilterChange={handleColumnFilterChange}
           onClearAll={handleClearColumnFilters}
           title="Dynamic 3-Column Header Filters"
+          sortColumn={sortColumn}
+          onSortColumnChange={setSortColumn}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
         />
 
         {/* Display Grouped Tables per Customer */}
-        {custKeys.length === 0 ? (
-          <div className="bg-white rounded-lg border border-[#D9DEE6] p-8 text-center text-slate-400">
+        {groupedCustData.length === 0 ? (
+          <div className="bg-[#ffffff] rounded-lg border border-[#D9DEE6] p-8 text-center text-slate-400">
             No matching Customer Ledger records found for Company Code {companyCode}.
           </div>
         ) : (
-          custKeys.map((custKey) => {
-            const items = groupedCustData[custKey];
-            const custSubtotal = items.reduce((acc, i) => acc + (i.amount_lc || 0), 0);
-            const custSubtotalAmount1 = items.reduce((acc, i) => acc + (i.amount1 || 0), 0);
-            const custName = items[0]?.customer_name || 'Customer Account';
+          groupedCustData.map((group) => {
+            const custKey = group.key;
+            const items = group.items;
+            const custDebitTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'S' ? (i.amount_lc || 0) : 0), 0);
+            const custCreditTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'H' ? (i.amount_lc || 0) : 0), 0);
+            const custNetTotal = custDebitTotal - custCreditTotal;
 
             return (
               <div key={custKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
-                {/* SAP Customer Account Header Banner */}
-                <div className="bg-[#273B5E] text-white px-3 py-1.5 flex items-center gap-2.5 font-mono text-[11px]">
-                  <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
-                    Customer Account: {custKey}
-                  </span>
-                  {items[0]?.customer_name && (
-                    <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
-                      Customer Name: {items[0].customer_name}
+                {/* SAP Customer Account Header Banner with Net, Credit, Debit Totals */}
+                <div className="bg-[#273B5E] text-white px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-[11px]">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
+                      Customer Account: {custKey}
                     </span>
-                  )}
+                    {items[0]?.customer_name && (
+                      <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
+                        Customer Name: {items[0].customer_name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded font-medium">
+                      Debit: <strong className="text-white">₹{custDebitTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-rose-950/80 border border-rose-700/60 text-rose-300 px-2 py-0.5 rounded font-medium">
+                      Credit: <strong className="text-white">₹{custCreditTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-0.5 rounded font-bold">
+                      Net: <strong className="text-amber-200">₹{custNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap font-sans">
-                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold">
+                <div className="max-h-[60vh] overflow-auto border-t border-slate-200">
+                  <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap font-sans relative">
+                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold sticky top-0 z-10 shadow-sm">
                       <tr>
-                        <th className="py-1.5 px-2 text-center min-w-[40px]">St</th>
+                        <th className="py-2 px-2 text-center min-w-[40px] sticky top-0 bg-slate-100 z-10">St</th>
                         {orderedCols.map((col) => {
                           const isFiltered = selectedKeys.includes(col.key);
                           return (
                             <th
                               key={col.key}
                               style={{ minWidth: col.minWidth }}
-                              className={`py-1.5 px-2 font-mono ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'bg-amber-200/80 text-[#963F29] font-black border-b-2 border-[#963F29]' : ''}`}
+                              className={`py-2 px-2 font-mono sticky top-0 z-10 ${isFiltered ? 'bg-amber-200 text-[#963F29]' : 'bg-slate-100'} ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'font-black border-b-2 border-[#963F29]' : ''}`}
                             >
                               {col.label} {isFiltered && '★'}
                             </th>
@@ -1237,7 +2041,7 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
                       {/* Subtotal row */}
                       <tr className="bg-[#fef9c3] font-mono font-bold text-slate-900 border-t-2 border-slate-300">
                         <td colSpan={orderedCols.length + 1} className="py-1.5 px-2 text-right text-slate-800 text-[11px]">
-                          * Customer {custKey} Subtotal ({items.length} items): <span className="text-[#963F29] font-black ml-2">₹{custSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          * Customer {custKey} Subtotal ({items.length} items): <span className="text-[#963F29] font-black ml-2">₹{custNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </td>
                       </tr>
                     </tbody>
@@ -1248,18 +2052,32 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           })
         )}
 
+        {/* Bottom Pagination Bar */}
+        <ReportPaginationBar
+          currentPage={custPage}
+          totalPages={custPaginationInfo.total_pages}
+          totalCount={custPaginationInfo.total_count}
+          loading={loadingCust}
+          onPageChange={handleFetchCustomerLedger}
+        />
+
         {/* Grand Total Footer Box */}
-        <div className="bg-[#273B5E] px-4 py-2.5 rounded-lg shadow-sm flex items-center justify-between font-mono text-xs border border-slate-700/80">
-          <div className="space-y-0.5">
+        <div className="bg-[#273B5E] px-4 py-2.5 rounded-lg shadow-sm flex flex-col sm:flex-row items-center justify-between font-mono text-xs border border-slate-700/80 gap-3">
+          <div className="space-y-0.5 text-center sm:text-left">
             <span className="font-sans block text-[11px] uppercase tracking-wider font-bold text-slate-300">TOTAL GRAND ACCUMULATED BALANCE</span>
             <span className="font-bold text-[12px] block text-white">
-              Shortlisted Result Count: <span className="font-bold text-amber-300 ml-1">{apiCustData.length} records</span>
+              Total Records: <span className="font-bold text-amber-300 ml-1">{custPaginationInfo.total_count} records</span>
             </span>
           </div>
-          <div className="text-right space-y-0.5">
-            <span className="text-[10px] block font-sans uppercase font-medium text-slate-400">Currency INR</span>
-            <span className="text-sm font-bold block text-emerald-400" style={{ color: '#34D399', fontSize: '14px' }}>
-              ₹{grandTotalCustAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
+            <span className="bg-emerald-950/90 border border-emerald-600/80 text-emerald-300 px-3 py-1 rounded font-medium shadow-sm">
+              Debit: <strong className="text-white ml-1">₹{(custGrandTotal ? custGrandTotal.debit_total : custSummary.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-rose-950/90 border border-rose-600/80 text-rose-300 px-3 py-1 rounded font-medium shadow-sm">
+              Credit: <strong className="text-white ml-1">₹{(custGrandTotal ? custGrandTotal.credit_total : custSummary.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-amber-950/90 border border-amber-500/80 text-amber-300 px-3 py-1 rounded font-bold shadow-sm">
+              Net: <strong className="text-amber-200 ml-1">₹{(custGrandTotal ? custGrandTotal.net : custSummary.net).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
             </span>
           </div>
         </div>
@@ -1272,14 +2090,14 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // ----------------------------------------------------------------------------
   if (activeScreen === 'VENDOR_LEDGER_SEL') {
     return (
-      <div className="p-2 sm:p-3 max-w-md mx-auto select-none">
+      <div className="p-2 sm:p-3 max-w-xl mx-auto select-none">
         <div className="bg-white rounded-xl border border-[#D9DEE6] shadow-md overflow-hidden">
+          {/* Header */}
           <div className="bg-[#273B5E] text-white px-4 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-amber-500 animate-pulse" />
+              <Filter className="w-4 h-4 text-slate-300 shrink-0" />
               <div>
-                <h3 className="font-bold text-xs">VENDOR SUBSIDIARY SELECTION</h3>
-                <p className="text-[10px] text-gray-300">Transaction FBL1N - Accounts Payable</p>
+                <h3 className="font-bold text-xs sm:text-sm tracking-tight uppercase">Vendor Ledger Selection</h3>
               </div>
             </div>
             <button
@@ -1290,59 +2108,192 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
             </button>
           </div>
 
-          <div className="p-3.5 space-y-3 text-xs font-sans">
+          <div className="p-3 sm:p-3.5 space-y-2.5 text-xs font-sans">
+            {/* Optional Fields Section */}
+            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-2 space-y-1.5">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+                <span className="text-[10px] font-extrabold text-[#273B5E] uppercase tracking-wider">Optional Fields</span>
+                <span className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-mono">Range Filter</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-0.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider block">From Vendor Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0000200501"
+                    value={fromVendorNum}
+                    onChange={(e) => setFromVendorNum(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded px-2 py-1 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider block">To Vendor Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0000200502"
+                    value={toVendorNum}
+                    onChange={(e) => setToVendorNum(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded px-2 py-1 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Mandatory Fields Section */}
+            <div className="bg-amber-50/30 border border-amber-200/80 rounded-lg p-2 space-y-1.5">
+              <div className="flex items-center gap-2 border-b border-amber-200/60 pb-1">
+                <span className="text-[10px] font-extrabold text-[#963F29] uppercase tracking-wider">Mandatory Fields</span>
+                <span className="text-[8px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-mono font-bold">Required</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-0.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Company Code <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 6000"
+                    value={companyCode}
+                    onChange={(e) => setCompanyCode(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider block">
+                      From Date {vendorOption !== 'open_items' && <span className="text-rose-600 font-bold">*</span>}
+                    </label>
+                  </div>
+                  <input
+                    type="date"
+                    value={vendorFromDate}
+                    onChange={(e) => setVendorFromDate(e.target.value)}
+                    disabled={vendorOption === 'open_items'}
+                    className={`w-full border rounded px-1.5 py-1 text-xs font-mono transition-all ${vendorOption === 'open_items'
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                      : 'bg-white border-[#D9DEE6] text-slate-800 focus:outline-none focus:border-[#273B5E]'
+                      }`}
+                  />
+                </div>
+
+                <div className="space-y-0.5">
+                  <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider block">
+                    To Date <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={vendorToDate}
+                    onChange={(e) => setVendorToDate(e.target.value)}
+                    className="w-full bg-white border border-[#D9DEE6] rounded px-1.5 py-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#273B5E]"
+                    required
+                  />
+                </div>
+              </div>
+
+              {vendorOption === 'open_items' && (
+                <div className="bg-amber-100/70 border border-amber-300 text-amber-900 rounded p-1.5 text-[10px] flex items-center gap-1.5 mt-1">
+                  <Info className="w-3 h-3 text-amber-700 shrink-0" />
+                  <span className="leading-tight">
+                    <strong>Note:</strong> Open Items includes all uncleared postings up to <strong>To Date</strong>. From Date disabled.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Selection Options */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Select Vendor Account</label>
-              <select
-                id="vl-sel-vendor"
-                value={vendorCode}
-                onChange={(e) => setVendorCode(e.target.value)}
-                className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
-              >
-                {dbLFA1.map((v) => (
-                  <option key={v.LIFNR} value={v.LIFNR}>
-                    {v.LIFNR} - {v.NAME1}
-                  </option>
-                ))}
-              </select>
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">
+                Selection Type (Restrict to one selection)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <label
+                  onClick={() => setVendorOption('all_entries')}
+                  className={`flex flex-col items-center justify-center p-1.5 rounded-lg border-2 cursor-pointer transition-all ${vendorOption === 'all_entries'
+                    ? 'border-[#273B5E] bg-[#273B5E]/5 text-[#273B5E] font-bold shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name="vendor_option"
+                    value="all_entries"
+                    checked={vendorOption === 'all_entries'}
+                    onChange={() => setVendorOption('all_entries')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">All entries</span>
+                  <span className="text-[8px] text-slate-400 font-mono mt-0.5">(all_entries)</span>
+                </label>
+
+                <label
+                  onClick={() => setVendorOption('open_items')}
+                  className={`flex flex-col items-center justify-center p-1.5 rounded-lg border-2 cursor-pointer transition-all ${vendorOption === 'open_items'
+                    ? 'border-amber-600 bg-amber-50 text-amber-900 font-bold shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name="vendor_option"
+                    value="open_items"
+                    checked={vendorOption === 'open_items'}
+                    onChange={() => setVendorOption('open_items')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">Open Items</span>
+                  <span className="text-[8px] text-slate-400 font-mono mt-0.5">(open_items)</span>
+                </label>
+
+                <label
+                  onClick={() => setVendorOption('cleared_items')}
+                  className={`flex flex-col items-center justify-center p-1.5 rounded-lg border-2 cursor-pointer transition-all ${vendorOption === 'cleared_items'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name="vendor_option"
+                    value="cleared_items"
+                    checked={vendorOption === 'cleared_items'}
+                    onChange={() => setVendorOption('cleared_items')}
+                    className="sr-only"
+                  />
+                  <span className="text-xs">Cleared Items</span>
+                  <span className="text-[8px] text-slate-400 font-mono mt-0.5">(cleared_items)</span>
+                </label>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Company Code</label>
-                <input
-                  type="text"
-                  value={companyCode}
-                  onChange={(e) => setCompanyCode(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-bold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fiscal Year</label>
-                <input
-                  type="text"
-                  value={fiscalYear}
-                  onChange={(e) => setFiscalYear(e.target.value)}
-                  className="w-full bg-slate-50 border border-[#D9DEE6] rounded p-2 text-xs font-mono font-bold"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 gap-3">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between border-t border-slate-200 pt-2.5 gap-3">
               <button
                 id="btn-vl-back"
                 onClick={() => onNavigate('LEDGER_REP_MAIN')}
-                className="px-4 py-1.5 border border-[#D9DEE6] rounded-lg text-xs text-slate-600 hover:bg-slate-50 font-medium"
+                className="px-4 py-1.5 border border-[#D9DEE6] rounded-lg text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors text-center"
               >
                 Back
               </button>
               <button
                 id="btn-vl-display"
-                onClick={() => onNavigate('VENDOR_LEDGER_REP')}
-                className="px-5 py-1.5 bg-[#273B5E] hover:bg-[#3d5680] text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow-md"
+                disabled={loadingVendor}
+                onClick={() => handleFetchVendorLedger(1)}
+                className="px-5 py-1.5 bg-[#273B5E] hover:bg-[#1f2f4b] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
               >
-                <span>Query Vendor Items</span>
+                {loadingVendor ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Fetching Data...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Display Vendor Postings</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1355,173 +2306,224 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
   // VENDOR LEDGER - OUTPUT REPORT (FBL1N)
   // ----------------------------------------------------------------------------
   if (activeScreen === 'VENDOR_LEDGER_REP') {
+    const vendKeys = Object.keys(groupedVendorData);
+
+    const vendorColumnOptions: ColumnOption[] = [
+      { key: 'documentno', label: 'DocumentNo' },
+      { key: 'doc_type', label: 'DocType' },
+      { key: 'vendor', label: 'Vendor' },
+      { key: 'g_l_acct2', label: 'G/L Acct' },
+      { key: 'cocode', label: 'CoCode' },
+      { key: 'assignment', label: 'Assignment' },
+      { key: 'posting_date', label: 'Posting Date' },
+      { key: 'clgentdate', label: 'Clearing Date' },
+      { key: 'postkey', label: 'PostKey' },
+      { key: 'd_c_indic', label: 'D/C' },
+      { key: 'amount_lc', label: 'Amount (LC)' },
+      { key: 'amount1', label: 'Amount 1' },
+      { key: 'reference_key', label: 'Reference Key' },
+      { key: 'customer', label: 'Customer' },
+      { key: 'material', label: 'Material' },
+      { key: 'profit_ctr', label: 'Profit Ctr' },
+      { key: 'cost_ctr', label: 'Cost Ctr' }
+    ];
+
+    const vendorTableCols = [
+      { key: 'documentno', label: 'DocumentNo', minWidth: '110px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono font-bold text-[#963F29]">{i.documentno}</span> },
+      { key: 'doc_type', label: 'DocType', minWidth: '70px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700 font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]">{i.doc_type || 'SA'}</span> },
+      { key: 'vendor', label: 'Vendor', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700 font-bold">{i.vendor}</span> },
+      { key: 'g_l_acct2', label: 'G/L Acct', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.g_l_acct2}</span> },
+      { key: 'cocode', label: 'CoCode', minWidth: '70px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-center text-slate-600">{i.cocode}</span> },
+      { key: 'assignment', label: 'Assignment', minWidth: '110px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-600">{i.assignment || ''}</span> },
+      { key: 'posting_date', label: 'Posting Date', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.posting_date || ''}</span> },
+      { key: 'clgentdate', label: 'Clearing Date', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-600">{i.clgentdate ? i.clgentdate : <span className="text-amber-700 font-bold text-[10px]">Open Item</span>}</span> },
+      { key: 'postkey', label: 'PostKey', minWidth: '50px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-600">{i.postkey || ''}</span> },
+      { key: 'd_c_indic', label: 'D/C', minWidth: '50px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono font-semibold">{i.d_c_indic || ''}</span> },
+      { key: 'amount_lc', label: 'Amount (LC)', minWidth: '130px', align: 'right', render: (i: VendorLedgerItem) => <span className={`font-mono font-bold ${i.d_c_indic === 'S' ? 'text-emerald-700' : 'text-slate-900'}`}>₹{(i.amount_lc || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span> },
+      { key: 'amount1', label: 'Amount 1', minWidth: '120px', align: 'right', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.amount1 !== undefined && i.amount1 !== null ? `₹${i.amount1.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : ''}</span> },
+      { key: 'reference_key', label: 'Reference Key', minWidth: '160px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-600 truncate max-w-[160px]" title={i.reference_key || ''}>{i.reference_key || ''}</span> },
+      { key: 'customer', label: 'Customer', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.customer || ''}</span> },
+      { key: 'material', label: 'Material', minWidth: '100px', align: 'left', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-700">{i.material || ''}</span> },
+      { key: 'profit_ctr', label: 'Profit Ctr', minWidth: '90px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-500">{i.profit_ctr || ''}</span> },
+      { key: 'cost_ctr', label: 'Cost Ctr', minWidth: '90px', align: 'center', render: (i: VendorLedgerItem) => <span className="font-mono text-slate-500">{i.cost_ctr || ''}</span> }
+    ];
+
+    const selectedKeys = columnFilters.map(f => f.columnKey).filter(Boolean);
+    const orderedCols = [
+      ...selectedKeys.map(k => vendorTableCols.find(c => c.key === k)).filter(Boolean) as typeof vendorTableCols,
+      ...vendorTableCols.filter(c => !selectedKeys.includes(c.key))
+    ];
+
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto select-none">
-        {/* Vendor Header Details & Metadata block */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Vendor master information LFA1 (1-column) */}
-          <div className="bg-white border border-[#D9DEE6] p-5 rounded-xl shadow-sm flex flex-col justify-between lg:col-span-1">
-            <div>
-              <span className="text-[9px] uppercase tracking-wider font-mono text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-bold">
-                SAP VENDOR (LFA1)
-              </span>
-              <h3 className="font-bold text-base text-[#273B5E] mt-2">{activeVendor.NAME1}</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                {activeVendor.STRAS}, {activeVendor.ORT01}, {activeVendor.PSTLZ}, {activeVendor.LAND1}
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-100 text-[10px] font-mono text-slate-400 mt-4">
-              Vendor Code Lookup: <strong className="text-slate-600 font-bold">{activeVendor.LIFNR}</strong>
-            </div>
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto select-none font-sans">
+        {/* Top Header toolbar */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="text-base sm:text-lg font-sans font-bold text-[#273B5E]">Vendor Line Item Display</h2>
+            <p className="text-[11px] sm:text-xs text-slate-500 font-mono mt-0.5">
+              Company Code: <strong>{companyCode}</strong> | Option: <strong>{vendorOption}</strong> | Page: <strong>{vendorPage} of {vendorPaginationInfo.total_pages || 1}</strong> | Total Records: <strong>{vendorPaginationInfo.total_count}</strong>
+            </p>
           </div>
-
-          {/* OutputHeaderButtonBoxes 9-grid (2-columns) */}
-          <div className="lg:col-span-2">
-            {(() => {
-              const vendFields: ButtonBoxField[] = [
-                { label: 'Vendor Account', value: activeVendor.LIFNR, highlight: true, valueClass: 'text-[#963F29]' },
-                { label: 'Current Balance', value: `₹${(vendorReportEntries.reduce((acc, e) => acc + (e.credit - e.debit), 0) * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, valueClass: 'text-rose-600 font-bold' },
-                { label: 'Company Code', value: companyCode },
-                { label: 'Fiscal Year', value: fiscalYear },
-                { label: 'Recon Account', value: '210000 (AP General)' },
-                { label: 'Country', value: 'IN' },
-                { label: 'Active Records', value: `${filteredVendorList.length} Rows`, valueClass: 'text-[#273B5E]' },
-                { label: 'Currency', value: 'INR', valueClass: 'text-emerald-600' },
-                { label: 'SAP Client', value: '800', badge: 'SYS: S4P' }
-              ];
-              return (
-                <OutputHeaderButtonBoxes
-                  fields={vendFields}
-                  title="VENDOR BALANCES TRANSACTION CONTEXT"
-                  tcode="FBL1N"
-                />
-              );
-            })()}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleExportVendorExcel}
+              className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-[#273B5E] hover:text-white hover:border-[#273B5E] rounded-md text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Download Vendor Ledger to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" />
+              <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+              <span>Download Excel</span>
+            </button>
+            <button
+              id="btn-vl-rep-back"
+              onClick={() => onNavigate('VENDOR_LEDGER_SEL')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Selection Screen</span>
+            </button>
           </div>
         </div>
 
-        {/* SAP Vendor Liability Entry Block (exactly 2 inputs with button) */}
-        <div className="bg-[#963F29]/5 border-2 border-[#963F29]/30 border-l-8 border-l-[#963F29] rounded-xl p-6 flex flex-col md:flex-row items-end gap-5 shadow-sm transition-all hover:shadow-md">
-          <div className="flex-grow space-y-3 w-full md:w-auto">
-            <div className="flex items-center gap-2">
-              <span className="bg-[#963F29] text-white px-2.5 py-1 rounded text-xs font-mono tracking-wider font-extrabold uppercase">SAP Table BSIK</span>
-              <span className="text-xs uppercase font-black text-[#963F29] font-mono tracking-wide">Vendor AP Entry Fast Block</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-black text-slate-800 tracking-wide block uppercase">1. Enter Document Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 100000411"
-                  value={fastDocNum}
-                  onChange={(e) => setFastDocNum(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-3 text-sm sm:text-base md:text-lg font-mono font-black text-[#963F29] focus:outline-none focus:border-[#963F29] focus:ring-4 focus:ring-[#963F29]/10 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
+        {/* Dynamic 3 Key-Value Column Filters Toolbar */}
+        <ColumnFilterBar
+          columns={vendorColumnOptions}
+          filters={columnFilters}
+          onFilterChange={handleColumnFilterChange}
+          onClearAll={handleClearColumnFilters}
+          title="Dynamic 3-Column Header Filters"
+          sortColumn={sortColumn}
+          onSortColumnChange={setSortColumn}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+        />
+
+        {/* Display Grouped Tables per Vendor */}
+        {groupedVendorData.length === 0 ? (
+          <div className="bg-white rounded-lg border border-[#D9DEE6] p-8 text-center text-slate-400">
+            No matching Vendor Ledger records found for Company Code {companyCode}.
+          </div>
+        ) : (
+          groupedVendorData.map((group) => {
+            const vendKey = group.key;
+            const items = group.items;
+            const vendDebitTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'S' ? (i.amount_lc || 0) : 0), 0);
+            const vendCreditTotal = items.reduce((acc, i) => acc + (i.d_c_indic === 'H' ? (i.amount_lc || 0) : 0), 0);
+            const vendNetTotal = vendDebitTotal - vendCreditTotal;
+
+            return (
+              <div key={vendKey} className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm space-y-0">
+                {/* SAP Vendor Account Header Banner with Net, Credit, Debit Totals */}
+                <div className="bg-[#273B5E] text-white px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-[11px]">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-bold bg-[#963F29] px-2 py-0.5 rounded text-[10.5px]">
+                      Vendor Account: {vendKey}
+                    </span>
+                    {items[0]?.vendor_name && (
+                      <span className="font-bold bg-slate-700/80 text-slate-100 px-2 py-0.5 rounded text-[10.5px]">
+                        Vendor Name: {items[0].vendor_name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded font-medium">
+                      Debit: <strong className="text-white">₹{vendDebitTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-rose-950/80 border border-rose-700/60 text-rose-300 px-2 py-0.5 rounded font-medium">
+                      Credit: <strong className="text-white">₹{vendCreditTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                    <span className="bg-amber-950/80 border border-amber-600/60 text-amber-300 px-2 py-0.5 rounded font-bold">
+                      Net: <strong className="text-amber-200">₹{vendNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="max-h-[60vh] overflow-auto border-t border-slate-200">
+                  <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap font-sans relative">
+                    <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-800 font-bold sticky top-0 z-10 shadow-sm">
+                      <tr>
+                        <th className="py-2 px-2 text-center min-w-[40px] sticky top-0 bg-slate-100 z-10">St</th>
+                        {orderedCols.map((col) => {
+                          const isFiltered = selectedKeys.includes(col.key);
+                          return (
+                            <th
+                              key={col.key}
+                              style={{ minWidth: col.minWidth }}
+                              className={`py-2 px-2 font-mono sticky top-0 z-10 ${isFiltered ? 'bg-amber-200 text-[#963F29]' : 'bg-slate-100'} ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'font-black border-b-2 border-[#963F29]' : ''}`}
+                            >
+                              {col.label} {isFiltered && '★'}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {items.map((item, idx) => {
+                        const isCleared = Boolean(item.clgentdate);
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-1.5 px-2 text-center">
+                              {isCleared ? (
+                                <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" title={`Cleared on ${item.clgentdate}`} />
+                              ) : (
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-rose-500 shadow-sm" title="Open Item" />
+                              )}
+                            </td>
+                            {orderedCols.map((col) => {
+                              const isFiltered = selectedKeys.includes(col.key);
+                              return (
+                                <td
+                                  key={col.key}
+                                  className={`py-1.5 px-2 ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'} ${isFiltered ? 'bg-amber-50/60 font-semibold' : ''}`}
+                                >
+                                  {col.render(item)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                      {/* Subtotal row */}
+                      <tr className="bg-[#fef9c3] font-mono font-bold text-slate-900 border-t-2 border-slate-300">
+                        <td colSpan={orderedCols.length + 1} className="py-1.5 px-2 text-right text-slate-800 text-[11px]">
+                          * Vendor {vendKey} Subtotal ({items.length} items): <span className="text-[#963F29] font-black ml-2">₹{vendNetTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-black text-slate-800 tracking-wide block uppercase">2. Enter Transaction Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Raw steel delivery batch A"
-                  value={fastDesc}
-                  onChange={(e) => setFastDesc(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-lg px-4 py-3 text-sm sm:text-base md:text-lg font-black text-slate-800 focus:outline-none focus:border-[#963F29] focus:ring-4 focus:ring-[#963F29]/10 transition-all placeholder:text-slate-400 placeholder:font-normal"
-                />
-              </div>
-            </div>
+            );
+          })
+        )}
+
+        {/* Bottom Pagination Bar */}
+        <ReportPaginationBar
+          currentPage={vendorPage}
+          totalPages={vendorPaginationInfo.total_pages}
+          totalCount={vendorPaginationInfo.total_count}
+          loading={loadingVendor}
+          onPageChange={handleFetchVendorLedger}
+        />
+
+        {/* Grand Total Footer Box */}
+        <div className="bg-[#273B5E] px-4 py-2.5 rounded-lg shadow-sm flex flex-col sm:flex-row items-center justify-between font-mono text-xs border border-slate-700/80 gap-3">
+          <div className="space-y-0.5 text-center sm:text-left">
+            <span className="font-sans block text-[11px] uppercase tracking-wider font-bold text-slate-300">TOTAL GRAND ACCUMULATED BALANCE</span>
+            <span className="font-bold text-[12px] block text-white">
+              Total Records: <span className="font-bold text-amber-300 ml-1">{vendorPaginationInfo.total_count} records</span>
+            </span>
           </div>
-          <button
-            onClick={() => {
-              if (!fastDocNum.trim() || !fastDesc.trim()) {
-                triggerToast('Please fill in both inputs: Document Number and Description.');
-                return;
-              }
-              const currentEntries = vendorEntriesDb[vendorCode] || [];
-              if (currentEntries.some(e => e.documentNum === fastDocNum.trim())) {
-                triggerToast(`Document ${fastDocNum} already exists for this vendor!`, 'warning');
-                return;
-              }
-              const lastBalance = currentEntries.length > 0 ? currentEntries[currentEntries.length - 1].balance : 0;
-              const newEntry: LedgerEntry = {
-                postingDate: new Date().toISOString().split('T')[0],
-                documentNum: fastDocNum.trim(),
-                reference: 'VEND-LIAB',
-                description: fastDesc.trim(),
-                debit: 0,
-                credit: 6000,
-                balance: lastBalance - 6000
-              };
-              setVendorEntriesDb(prev => ({
-                ...prev,
-                [vendorCode]: [...currentEntries, newEntry]
-              }));
-              setFastDocNum('');
-              setFastDesc('');
-              triggerToast(`Successfully posted custom Vendor Ledger line item document ${newEntry.documentNum}.`);
-            }}
-            className="w-full md:w-auto px-8 py-4 bg-[#963F29] hover:bg-[#83331e] active:bg-[#682716] text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 shadow-md hover:translate-y-[-1px] active:translate-y-[0px]"
-          >
-            <span>+ Add Liability Item</span>
-          </button>
-        </div>
-
-        <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-          <h4 className="font-sans font-bold text-sm text-[#273B5E]">Postings & Open Accounts Payable</h4>
-          <button
-            id="btn-vl-rep-back"
-            onClick={() => onNavigate('VENDOR_LEDGER_SEL')}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[#D9DEE6] rounded text-xs text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Selection</span>
-          </button>
-        </div>
-
-        {/* Vendor items table */}
-        <div className="bg-white rounded-lg border border-[#D9DEE6] overflow-hidden shadow-sm">
-          <TableToolbar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            totalRecords={filteredVendorList.length}
-          />
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700">
-                <tr>
-                  <th className="p-3">Posting Date</th>
-                  <th className="p-3 font-mono">Doc Number</th>
-                  <th className="p-3 font-mono">Reference</th>
-                  <th className="p-3 font-mono text-center">CoCode</th>
-                  <th className="p-3 font-mono text-center">Year</th>
-                  <th className="p-3">Transaction Description</th>
-                  <th className="p-3 text-right font-mono">Debited Settlement</th>
-                  <th className="p-3 text-right font-mono">Credited Invoice</th>
-                  <th className="p-3 text-right font-mono">Outstanding Payable</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredVendorList.map((entry, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50">
-                    <td className="p-3">{entry.postingDate}</td>
-                    <td className="p-3 font-mono font-bold text-[#963F29]">{entry.documentNum}</td>
-                    <td className="p-3 font-mono">{entry.reference}</td>
-                    <td className="p-3 font-mono text-center text-slate-500 font-medium">{companyCode}</td>
-                    <td className="p-3 font-mono text-center text-slate-500 font-medium">{fiscalYear}</td>
-                    <td className="p-3 font-medium text-slate-800">{entry.description}</td>
-                    <td className="p-3 text-right text-emerald-600 font-mono font-semibold">
-                      {entry.debit > 0 ? `₹${(entry.debit * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
-                    </td>
-                    <td className="p-3 text-right text-rose-600 font-mono font-semibold">
-                      {entry.credit > 0 ? `₹${(entry.credit * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
-                    </td>
-                    <td className="p-3 text-right font-mono font-bold text-slate-900">
-                      ₹{(Math.abs(entry.balance) * 83).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
+            <span className="bg-emerald-950/90 border border-emerald-600/80 text-emerald-300 px-3 py-1 rounded font-medium shadow-sm">
+              Debit: <strong className="text-white ml-1">₹{(vendorGrandTotal ? vendorGrandTotal.debit_total : vendorSummary.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-rose-950/90 border border-rose-600/80 text-rose-300 px-3 py-1 rounded font-medium shadow-sm">
+              Credit: <strong className="text-white ml-1">₹{(vendorGrandTotal ? vendorGrandTotal.credit_total : vendorSummary.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
+            <span className="bg-amber-950/90 border border-amber-500/80 text-amber-300 px-3 py-1 rounded font-bold shadow-sm">
+              Net: <strong className="text-amber-200 ml-1">₹{(vendorGrandTotal ? vendorGrandTotal.net : vendorSummary.net).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -1576,22 +2578,24 @@ export const LedgerReportingModule: React.FC<LedgerReportingModuleProps> = ({
           <TableToolbar
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            onExportExcel={handleExportStockExcel}
             totalRecords={stockItems.length}
+            hideSearch={false}
           />
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700">
+          <div className="max-h-[60vh] overflow-auto border-t border-slate-200">
+            <table className="w-full text-left border-collapse text-xs relative">
+              <thead className="bg-slate-100 border-b border-[#D9DEE6] text-slate-700 sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="p-3 font-mono">Material Number</th>
-                  <th className="p-3">Material Description</th>
-                  <th className="p-3 font-mono text-center">CoCode</th>
-                  <th className="p-3 font-mono text-center">Year</th>
-                  <th className="p-3 font-mono">Plant</th>
-                  <th className="p-3 font-mono">Storage Loc</th>
-                  <th className="p-3 text-right font-mono">On-Hand Quantity</th>
-                  <th className="p-3">Unit</th>
-                  <th className="p-3 text-right font-mono">Simulated Valuation</th>
+                  <th className="p-3 font-mono bg-slate-100 sticky top-0 z-10">Material Number</th>
+                  <th className="p-3 bg-slate-100 sticky top-0 z-10">Material Description</th>
+                  <th className="p-3 font-mono text-center bg-slate-100 sticky top-0 z-10">CoCode</th>
+                  <th className="p-3 font-mono text-center bg-slate-100 sticky top-0 z-10">Year</th>
+                  <th className="p-3 font-mono bg-slate-100 sticky top-0 z-10">Plant</th>
+                  <th className="p-3 font-mono bg-slate-100 sticky top-0 z-10">Storage Loc</th>
+                  <th className="p-3 text-right font-mono bg-slate-100 sticky top-0 z-10">On-Hand Quantity</th>
+                  <th className="p-3 bg-slate-100 sticky top-0 z-10">Unit</th>
+                  <th className="p-3 text-right font-mono bg-slate-100 sticky top-0 z-10">Simulated Valuation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
